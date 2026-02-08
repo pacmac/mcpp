@@ -82,15 +82,15 @@ python3 cli.py call spi_init --overwrite true
 
 **System-wide access:**
 
-A bash wrapper is provided at `/usr/share/pac/dev/py/mymcp` (in PATH):
+A bash wrapper is provided at `/usr/share/pac/dev/py/mycli` (in PATH):
 ```bash
 # Use from anywhere
-mymcp list
-mymcp call fetch_page --url https://example.com
-mymcp call spi_init
+mycli list
+mycli call fetch_page --url https://example.com
+mycli call spi_init
 ```
 
-The wrapper script (`/usr/share/pac/dev/py/mymcp`):
+The wrapper script (`/usr/share/pac/dev/py/mycli`):
 ```bash
 #!/usr/bin/env bash
 exec python3 /usr/share/pac/dev/py/mympc/cli.py "$@"
@@ -115,10 +115,10 @@ The CLI respects the current working directory:
 
 ```bash
 cd /tmp
-mymcp call spi_init  # Creates /tmp/spi/ directory
+mycli call spi_init  # Creates /tmp/spi/ directory
 
 cd /home/user/project
-mymcp call spi_init  # Creates /home/user/project/spi/ directory
+mycli call spi_init  # Creates /home/user/project/spi/ directory
 ```
 
 #### 1.4.5 Arguments
