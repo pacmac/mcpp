@@ -82,7 +82,7 @@ python3 cli.py call spi_init --overwrite true
 
 **System-wide access:**
 
-A bash wrapper is provided at `/usr/share/pac/dev/mymcp` (in PATH):
+A bash wrapper is provided at `/usr/share/pac/dev/py/mymcp` (in PATH):
 ```bash
 # Use from anywhere
 mymcp list
@@ -90,7 +90,7 @@ mymcp call fetch_page --url https://example.com
 mymcp call spi_init
 ```
 
-The wrapper script (`/usr/share/pac/dev/mymcp`):
+The wrapper script (`/usr/share/pac/dev/py/mymcp`):
 ```bash
 #!/usr/bin/env bash
 exec python3 /usr/share/pac/dev/py/mympc/cli.py "$@"
