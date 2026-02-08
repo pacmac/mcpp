@@ -55,6 +55,46 @@ This enables:
          └──────────────────────────┘
 ```
 
+### 2.1 Human CLI Interface (Optional)
+
+For direct human usage without an agent, a CLI wrapper (`cli.py`) provides command-line access:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Human User                                                      │
+│                                                                 │
+│ Command: mymcp call fetch_page --url https://example.com       │
+└────────────────────┬────────────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────────────┐
+│              CLI Wrapper (cli.py)                               │
+│                                                                 │
+│ • Parse command-line arguments                                 │
+│ • Spawn wrapper.py subprocess                                  │
+│ • Send JSON-RPC messages (initialize, tools/list, tools/call)  │
+│ • Parse responses                                              │
+│ • Pretty-print output for humans                               │
+└────────────────────┬────────────────────────────────────────────┘
+                     │ stdin/stdout (same as agent)
+┌────────────────────▼────────────────────────────────────────────┐
+│              MCP Stdio Wrapper (wrapper.py)                     │
+│                                                                 │
+│                     [same as above]                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key differences from agent usage:**
+- **Input**: CLI arguments (`--arg value`) instead of JSON-RPC
+- **Output**: Human-readable text instead of JSON
+- **Lifecycle**: One-shot execution (spawn, call, exit) instead of persistent session
+- **Workspace**: Uses shell's `$PWD` as `workspace_dir`
+
+**Use cases:**
+- Manual testing of tools
+- Shell scripts and automation
+- Quick ad-hoc tool invocation
+- Headless environments without agent access
+
 ## 3. Wrapper Responsibilities
 
 The wrapper is a **stateless, protocol-translating daemon** that:

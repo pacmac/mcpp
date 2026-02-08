@@ -49,8 +49,124 @@ codex mcp get mymcp
 
 **Workspace note (important for `local` tools):**
 - `workspace_dir` is the wrapper process startup working directory.
-- To make tools operate “on the folder it is called from”, run the agent from that folder, or use `codex -C /path/to/workspace` (sets the agent workspace).
+- To make tools operate "on the folder it is called from", run the agent from that folder, or use `codex -C /path/to/workspace` (sets the agent workspace).
 - If your client cannot set server `cwd`, wrap the command: `bash -lc 'cd /path/to/workspace && python3 wrapper.py'`.
+
+### 1.4 Human CLI (Direct Command-Line Usage)
+
+For direct human interaction without an agent, use `cli.py`.
+
+#### 1.4.1 Purpose
+
+The CLI wrapper provides a command-line interface for humans to call MCP tools directly:
+- No need to configure an AI agent
+- Simple command-line arguments (not JSON-RPC)
+- Pretty-printed output (not raw JSON)
+- Useful for scripts, automation, and manual testing
+
+#### 1.4.2 Usage
+
+**Basic invocation:**
+```bash
+# List available tools
+python3 cli.py list
+
+# Call a tool
+python3 cli.py call <tool_name> [--arg value ...]
+
+# Examples
+python3 cli.py call fetch_page --url https://example.com --max_chars 5000
+python3 cli.py call spi_init
+python3 cli.py call spi_init --overwrite true
+```
+
+**Make it executable (optional):**
+```bash
+chmod +x cli.py
+ln -s /usr/share/pac/dev/py/mympc/cli.py /usr/local/bin/mymcp
+
+# Then use it directly
+mymcp list
+mymcp call fetch_page --url https://example.com
+```
+
+#### 1.4.3 How It Works
+
+1. **Spawns wrapper.py** as subprocess
+2. **Sends JSON-RPC** messages over stdin/stdout:
+   - `initialize` - handshake
+   - `tools/list` - discover available tools
+   - `tools/call` - execute requested tool
+3. **Parses responses** and displays human-friendly output
+4. **Exits** - closes subprocess, returns exit code
+
+#### 1.4.4 Workspace Context
+
+The CLI respects the current working directory:
+- Runs wrapper.py from the current directory
+- `workspace_dir` = your shell's `$PWD`
+- Local tools (like `spi_init`) operate on current directory
+
+```bash
+cd /tmp
+mymcp call spi_init  # Creates /tmp/spi/ directory
+
+cd /home/user/project
+mymcp call spi_init  # Creates /home/user/project/spi/ directory
+```
+
+#### 1.4.5 Arguments
+
+**Tool arguments are passed as CLI flags:**
+- String arguments: `--arg value`
+- Boolean arguments: `--flag true` or `--flag false`
+- Number arguments: `--number 123`
+- JSON arguments: `--data '{"key": "value"}'` (auto-parsed)
+
+**Type conversion:**
+- `"true"` / `"false"` → boolean
+- `"123"` / `"45.6"` → number
+- `'{"x":1}'` → object (JSON parse)
+- Everything else → string
+
+#### 1.4.6 Output Format
+
+**Success:**
+```
+Tool: fetch_page
+Status: success
+
+Result:
+<html>...</html>
+```
+
+**Error:**
+```
+Tool: fetch_page
+Status: error
+
+Error: Failed to fetch URL: connection timeout
+```
+
+#### 1.4.7 Exit Codes
+
+- `0` - Tool executed successfully (`success: true`)
+- `1` - Tool execution failed (`success: false`)
+- `2` - CLI error (invalid arguments, wrapper failure, etc.)
+
+#### 1.4.8 Environment Variables
+
+Same as wrapper.py:
+- `MYMCP_MODULES_PATH` - tools directory (default: `tools`)
+- `MYMCP_LOG_LEVEL` - `debug|info|warning|error` (default: `error` for CLI)
+- `MYMCP_TIMEOUT_SECONDS` - per-tool timeout (default: `30`)
+
+#### 1.4.9 Limitations
+
+- **Sequential only** - one tool call per invocation (no batching)
+- **No streaming** - waits for complete response before displaying
+- **Simple args only** - complex nested JSON structures require `--json-arg '...'` format
+- **No resources/prompts** - only supports `tools/call` (not full MCP protocol)
 
 ## 2. Adding and Testing Modules
 
