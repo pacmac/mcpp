@@ -80,14 +80,20 @@ python3 cli.py call spi_init
 python3 cli.py call spi_init --overwrite true
 ```
 
-**Make it executable (optional):**
-```bash
-chmod +x cli.py
-ln -s /usr/share/pac/dev/py/mympc/cli.py /usr/local/bin/mymcp
+**System-wide access:**
 
-# Then use it directly
+A bash wrapper is provided at `/usr/share/pac/dev/mymcp` (in PATH):
+```bash
+# Use from anywhere
 mymcp list
 mymcp call fetch_page --url https://example.com
+mymcp call spi_init
+```
+
+The wrapper script (`/usr/share/pac/dev/mymcp`):
+```bash
+#!/usr/bin/env bash
+exec python3 /usr/share/pac/dev/py/mympc/cli.py "$@"
 ```
 
 #### 1.4.3 How It Works
