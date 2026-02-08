@@ -112,9 +112,9 @@ Examples:
 **MOST IMPORTANT**: To configure this MCP server globally across all projects, use:
 
 ```bash
-claude mcp add mympc --scope user \
-  --env MYMPC_LOG_LEVEL=error \
-  --env MYMPC_TIMEOUT_SECONDS=30 \
+claude mcp add mymcp --scope user \
+  --env MYMCP_LOG_LEVEL=error \
+  --env MYMCP_TIMEOUT_SECONDS=30 \
   -- python3 /absolute/path/to/wrapper.py
 ```
 

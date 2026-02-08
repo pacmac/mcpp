@@ -31,10 +31,10 @@ For ANY MCP tool server to work, you MUST:
 
 ## The Problem
 
-**User Expectation:** mympc is a common/shared MCP server that should be available from ANY project directory on this server. It should work seamlessly - when configured once per agent, the tools should be available everywhere without per-project configuration.
+**User Expectation:** mymcp is a common/shared MCP server that should be available from ANY project directory on this server. It should work seamlessly - when configured once per agent, the tools should be available everywhere without per-project configuration.
 
 **What Was Broken:**
-- mympc MCP server was configured in `.claude.json` under `projects["/usr/share/pac/dev/py"]` (per-project config)
+- mymcp MCP server was configured in `.claude.json` under `projects["/usr/share/pac/dev/py"]` (per-project config)
 - This meant tools were only available in that specific directory
 - When working in other directories (like `/usr/share/pac/dev/py/mympc` or any other project), the tools were not available
 - Claude tried to use the tools but got "No such tool" errors
@@ -66,7 +66,7 @@ For ANY MCP tool server to work, you MUST:
 ## What Was Done (Step 1)
 
 1. **Diagnosed the problem:**
-   - Checked `.claude.json` - mympc only in `/usr/share/pac/dev/py` project config
+   - Checked `.claude.json` - mymcp only in `/usr/share/pac/dev/py` project config
    - Confirmed current directory had no MCP server config
    - Identified that per-project config was the wrong approach
 
@@ -75,16 +75,16 @@ For ANY MCP tool server to work, you MUST:
    - This applies to ALL projects, not per-directory
 
 3. **Applied the fix:**
-   - Added mympc to global config in `~/.claude/settings.json`:
+   - Added mymcp to global config in `~/.claude/settings.json`:
    ```json
    "mcpServers": {
-     "mympc": {
+     "mymcp": {
        "type": "stdio",
        "command": "python3",
        "args": ["/usr/share/pac/dev/py/mympc/wrapper.py"],
        "env": {
-         "MYMPC_LOG_LEVEL": "error",
-         "MYMPC_TIMEOUT_SECONDS": "30"
+         "MYMCP_LOG_LEVEL": "error",
+         "MYMCP_TIMEOUT_SECONDS": "30"
        }
      }
    }

@@ -28,7 +28,7 @@ import importlib.util
 
 
 PROTOCOL_VERSION = "2024-11-05"
-SERVER_INFO = {"name": "mympc-wrapper", "version": "0.1.0"}
+SERVER_INFO = {"name": "mymcp-wrapper", "version": "0.1.0"}
 
 _shutdown_requested = False
 
@@ -56,7 +56,7 @@ class ToolEntry:
 
 
 def _setup_logging() -> None:
-    level_s = os.getenv("MYMPC_LOG_LEVEL", "info").lower().strip()
+    level_s = os.getenv("MYMCP_LOG_LEVEL", "info").lower().strip()
     level = {
         "debug": logging.DEBUG,
         "info": logging.INFO,
@@ -72,13 +72,13 @@ def _setup_logging() -> None:
 
 def _load_config() -> tuple[Path, int]:
     base_dir = Path(__file__).resolve().parent
-    modules_path_s = os.getenv("MYMPC_MODULES_PATH", "tools").strip()
+    modules_path_s = os.getenv("MYMCP_MODULES_PATH", "tools").strip()
     tools_dir = Path(modules_path_s)
     if not tools_dir.is_absolute():
         tools_dir = (base_dir / tools_dir).resolve()
 
     try:
-        timeout_s = int(os.getenv("MYMPC_TIMEOUT_SECONDS", "30").strip())
+        timeout_s = int(os.getenv("MYMCP_TIMEOUT_SECONDS", "30").strip())
     except Exception:
         timeout_s = 30
     return tools_dir, timeout_s

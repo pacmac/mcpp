@@ -1,7 +1,7 @@
 # MCP Tool Integration - Postmortem & Critical Requirements
 
 **Date**: 2026-02-08
-**Project**: mympc (stdio MCP server wrapper)
+**Project**: mymcp (stdio MCP server wrapper)
 **Issue**: MCP server connected but tools were invisible to Claude Code
 **Status**: ✅ RESOLVED
 
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The mympc MCP server was properly configured and connected, but its tools were invisible to Claude Code. The root cause was a missing capability declaration in the MCP protocol `initialize` response. This postmortem documents the **critical requirements** that MUST be met for any MCP tool server to work.
+The mymcp MCP server was properly configured and connected, but its tools were invisible to Claude Code. The root cause was a missing capability declaration in the MCP protocol `initialize` response. This postmortem documents the **critical requirements** that MUST be met for any MCP tool server to work.
 
 **UPDATE (2026-02-08)**: After extensive investigation, discovered the **correct way** to configure MCP servers globally is using the Claude CLI with `--scope user` flag, NOT manual config file editing.
 
@@ -20,9 +20,9 @@ The mympc MCP server was properly configured and connected, but its tools were i
 **The correct command to configure MCP servers globally:**
 
 ```bash
-claude mcp add mympc --scope user \
-  --env MYMPC_LOG_LEVEL=error \
-  --env MYMPC_TIMEOUT_SECONDS=30 \
+claude mcp add mymcp --scope user \
+  --env MYMCP_LOG_LEVEL=error \
+  --env MYMCP_TIMEOUT_SECONDS=30 \
   -- python3 /usr/share/pac/dev/py/mympc/wrapper.py
 ```
 
@@ -40,8 +40,8 @@ claude mcp add mympc --scope user \
 
 **Cleanup after manual configuration attempts:**
 If you previously tried manual config, remove old definitions:
-- Remove mympc from top-level `mcpServers` in `/root/.claude.json`
-- Remove mympc from per-project `mcpServers` in `/root/.claude.json` projects
+- Remove mymcp from top-level `mcpServers` in `/root/.claude.json`
+- Remove mymcp from per-project `mcpServers` in `/root/.claude.json` projects
 - The user-scoped definition in `~/.claude/settings.json` will take precedence
 
 ---

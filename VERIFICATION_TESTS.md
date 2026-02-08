@@ -1,6 +1,6 @@
 # MCP Server Verification Tests
 
-**Purpose**: Comprehensive test procedures to verify mympc MCP server works correctly across different scenarios.
+**Purpose**: Comprehensive test procedures to verify mymcp MCP server works correctly across different scenarios.
 
 **Last Updated**: 2026-02-08
 
@@ -24,7 +24,7 @@
 
 **Prerequisites**:
 - Claude Code installed and configured
-- mympc configured in `~/.claude/settings.json`
+- mymcp configured in `~/.claude/settings.json`
 
 **Procedure**:
 
@@ -33,7 +33,7 @@
 3. Observe Claude's behavior
 
 **Expected Result**:
-- Claude automatically uses `mcp__mympc__fetch_page` tool
+- Claude automatically uses `mcp__mymcp__fetch_page` tool
 - No need to tell Claude the tool exists
 - Page content is fetched and displayed
 
@@ -43,7 +43,7 @@
 - ✅ Fetch completes successfully
 
 **If Test Fails**:
-- Check `/mcp` command to see if mympc shows connected
+- Check `/mcp` command to see if mymcp shows connected
 - Verify wrapper.py line 296 has `"capabilities": {"tools": {}}`
 - Restart Claude Code session
 - See MCP_POSTMORTEM.md "Quick Diagnosis Guide"
@@ -58,7 +58,7 @@
 
 **Prerequisites**:
 - Claude Code running
-- mympc tools available
+- mymcp tools available
 
 **Procedure**:
 
@@ -83,7 +83,7 @@
 **If Test Fails**:
 - Check wrapper.py line 382: should capture `Path.cwd().resolve()`
 - Verify Claude Code doesn't chdir before launching MCP server
-- Check if environment variable `MYMPC_WORKSPACE_DIR` is overriding
+- Check if environment variable `MYMCP_WORKSPACE_DIR` is overriding
 
 **Status**: ✅ PASSED (2026-02-08)
 - Tested in `/usr/share/pac/dev/py/mympc`
@@ -113,15 +113,15 @@
    claude-code
    ```
 4. **Verify workspace_dir**:
-   - Type: `use scaffold_where to show workspace_dir`
+   - Type: `use scaffold_info to show workspace_dir`
    - Expected: `{"workspace_dir": "/tmp", ...}`
 
 5. **Test file creation**:
-   - Type: `use scaffold_mkdir to create a directory called test-mympc-verification`
+   - Type: `use scaffold_dir to create a directory called test-mymcp-verification`
    - Expected: Success message
 
 6. **Verify location**:
-   - Type: `ls -la /tmp/test-mympc-verification`
+   - Type: `ls -la /tmp/test-mymcp-verification`
    - Expected: Directory exists in `/tmp`
 
 ### Part B: Start from different directory
@@ -136,19 +136,19 @@
    claude-code
    ```
 10. **Verify workspace_dir changed**:
-    - Type: `use scaffold_where to show workspace_dir`
+    - Type: `use scaffold_info to show workspace_dir`
     - Expected: `{"workspace_dir": "/var/tmp", ...}`
 
 11. **Test file creation**:
-    - Type: `use scaffold_mkdir to create a directory called test-mympc-verification-2`
-    - Expected: Directory created in `/var/tmp/test-mympc-verification-2`
+    - Type: `use scaffold_dir to create a directory called test-mymcp-verification-2`
+    - Expected: Directory created in `/var/tmp/test-mymcp-verification-2`
 
 ### Part C: Cleanup
 
 12. **Remove test directories**:
     ```bash
-    rm -rf /tmp/test-mympc-verification
-    rm -rf /var/tmp/test-mympc-verification-2
+    rm -rf /tmp/test-mymcp-verification
+    rm -rf /var/tmp/test-mymcp-verification-2
     ```
 
 **Expected Results**:
@@ -168,7 +168,7 @@ This indicates Claude Code reuses the wrapper process across sessions. You need 
 
 1. **Add to wrapper.py line 382**:
    ```python
-   workspace_dir = os.getenv("MYMPC_WORKSPACE_DIR")
+   workspace_dir = os.getenv("MYMCP_WORKSPACE_DIR")
    if not workspace_dir:
        workspace_dir = str(Path.cwd().resolve())
    ```
@@ -179,9 +179,9 @@ This indicates Claude Code reuses the wrapper process across sessions. You need 
      "projects": {
        "/tmp": {
          "mcpServers": {
-           "mympc": {
+           "mymcp": {
              "env": {
-               "MYMPC_WORKSPACE_DIR": "/tmp"
+               "MYMCP_WORKSPACE_DIR": "/tmp"
              }
            }
          }
@@ -214,9 +214,9 @@ This indicates Claude Code reuses the wrapper process across sessions. You need 
    ```
 2. **Start Claude Code**
 3. **Create project-specific file**:
-   - Type: `use scaffold_write_text to create file "mympc-test.txt" with content "Project A test"`
+   - Type: `use scaffold_file_write to create file "mymcp-test.txt" with content "Project A test"`
 4. **Verify creation**:
-   - Type: `cat ~/projects/project-a/mympc-test.txt`
+   - Type: `cat ~/projects/project-a/mymcp-test.txt`
    - Expected: "Project A test"
 5. **Note workspace_dir**:
    - Type: `use scaffold_where`
@@ -231,9 +231,9 @@ This indicates Claude Code reuses the wrapper process across sessions. You need 
    ```
 8. **Start Claude Code**
 9. **Create project-specific file**:
-   - Type: `use scaffold_write_text to create file "mympc-test.txt" with content "Project B test"`
+   - Type: `use scaffold_file_write to create file "mymcp-test.txt" with content "Project B test"`
 10. **Verify creation**:
-    - Type: `cat ~/projects/project-b/mympc-test.txt`
+    - Type: `cat ~/projects/project-b/mymcp-test.txt`
     - Expected: "Project B test"
 11. **Note workspace_dir**:
     - Type: `use scaffold_where`
@@ -243,16 +243,16 @@ This indicates Claude Code reuses the wrapper process across sessions. You need 
 
 12. **Check both files exist in correct locations**:
     ```bash
-    cat ~/projects/project-a/mympc-test.txt  # Should show "Project A test"
-    cat ~/projects/project-b/mympc-test.txt  # Should show "Project B test"
+    cat ~/projects/project-a/mymcp-test.txt  # Should show "Project A test"
+    cat ~/projects/project-b/mymcp-test.txt  # Should show "Project B test"
     ```
 
 ### Cleanup
 
 13. **Remove test files**:
     ```bash
-    rm ~/projects/project-a/mympc-test.txt
-    rm ~/projects/project-b/mympc-test.txt
+    rm ~/projects/project-a/mymcp-test.txt
+    rm ~/projects/project-b/mymcp-test.txt
     ```
 
 **Expected Results**:
@@ -278,7 +278,7 @@ This indicates Claude Code reuses the wrapper process across sessions. You need 
 **What it tests**: Individual tool functionality works correctly
 
 **Prerequisites**:
-- mympc tools available
+- mymcp tools available
 - Internet connectivity (for fetch_page)
 
 **Procedure**:
@@ -293,16 +293,16 @@ This indicates Claude Code reuses the wrapper process across sessions. You need 
 
 **Status**: ✅ PASSED (2026-02-08)
 
-### 5b: scaffold_where tool
+### 5b: scaffold_info tool
 
-1. Type: `use scaffold_where`
+1. Type: `use scaffold_info`
 2. Verify returns workspace_dir, module_dir, module_scope
 
 **Expected**: JSON object with three fields
 
 **Status**: ✅ PASSED (2026-02-08)
 
-### 5c: scaffold_mkdir tool
+### 5c: scaffold_dir tool
 
 1. Type: `use scaffold_mkdir to create directory "test-dir"`
 2. Verify: `ls -la test-dir`
@@ -312,7 +312,7 @@ This indicates Claude Code reuses the wrapper process across sessions. You need 
 
 **Status**: ⏸️ PENDING
 
-### 5d: scaffold_write_text tool
+### 5d: scaffold_file_write tool
 
 1. Type: `use scaffold_write_text to create file "test.txt" with content "Hello World"`
 2. Verify: `cat test.txt`
@@ -322,10 +322,10 @@ This indicates Claude Code reuses the wrapper process across sessions. You need 
 
 **Status**: ⏸️ PENDING
 
-### 5e: scaffold_read_text tool
+### 5e: scaffold_file_read tool
 
 1. Create test file: `echo "test content" > read-test.txt`
-2. Type: `use scaffold_read_text to read "read-test.txt"`
+2. Type: `use scaffold_file_read to read "read-test.txt"`
 3. Verify content matches
 4. Cleanup: `rm read-test.txt`
 

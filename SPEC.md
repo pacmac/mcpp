@@ -38,7 +38,30 @@ Two module layouts are supported:
 
 Files or directories starting with `_` are ignored.
 
-### 1.2 Module Required Exports
+### 1.2 Tool Naming Convention (MANDATORY)
+
+All tool names MUST follow the pattern: `<module>_<item>_<action>`
+
+**Rules:**
+- Keep names SHORT (prefer abbreviations when clear)
+- Use lowercase with underscores
+- Module name is always the prefix
+- Item identifies what the tool operates on
+- Action describes what it does (may be omitted if obvious)
+
+**Examples:**
+- `fetch_page` - module=fetch, item=page, action implied (get)
+- `scaffold_dir` - module=scaffold, item=dir, action implied (create)
+- `scaffold_file_write` - module=scaffold, item=file, action=write
+- `scaffold_file_read` - module=scaffold, item=file, action=read
+- `scaffold_info` - module=scaffold, item=info, action implied (get)
+- `spi_init` - module=spi, item=project implied, action=init
+
+**Exposure:** Tools are exposed via Claude Code as `mcp__mymcp__<toolname>`
+- Example: `scaffold_dir` becomes `mcp__mymcp__scaffold_dir`
+- The `mcp__mymcp__` prefix is added automatically by Claude Code
+
+### 1.3 Module Required Exports
 
 Every module MUST define:
 
@@ -158,7 +181,7 @@ Notes:
   - If `module_scope == "global"`: interpret relative file paths as relative to `module_dir`.
 - To preserve backward compatibility, the wrapper MAY support modules that only accept the 2-argument signature `execute(tool_name, arguments)` by detecting arity and calling accordingly.
 
-### 1.3 Module Response Contract
+### 1.4 Module Response Contract
 
 The `execute()` function MUST always return a dict with:
 
@@ -189,7 +212,7 @@ The `execute()` function MUST always return a dict with:
 }
 ```
 
-### 1.4 Module Constraints
+### 1.5 Module Constraints
 
 - **Pure Python**: Standard library + pip-installed packages
 - **No global state**: Each `execute()` call is independent
@@ -198,7 +221,7 @@ The `execute()` function MUST always return a dict with:
 - **Timeouts**: Should not block indefinitely
 - **Dependencies**: List in a `requirements.txt` at module level (optional but recommended)
 
-### 1.5 Optional Module Features
+### 1.6 Optional Module Features
 
 Modules may optionally define:
 

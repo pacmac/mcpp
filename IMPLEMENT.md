@@ -14,9 +14,9 @@ The wrapper reads from stdin and writes to stdout. No command-line arguments nee
 ### 1.2 Environment Variables
 
 Supported env vars:
-- `MYMPC_MODULES_PATH`: tools directory (default: `tools`)
-- `MYMPC_LOG_LEVEL`: `debug|info|warning|error` (default: `info`)
-- `MYMPC_TIMEOUT_SECONDS`: per-tool timeout in seconds (default: `30`)
+- `MYMCP_MODULES_PATH`: tools directory (default: `tools`)
+- `MYMCP_LOG_LEVEL`: `debug|info|warning|error` (default: `info`)
+- `MYMCP_TIMEOUT_SECONDS`: per-tool timeout in seconds (default: `30`)
 
 ### 1.3 Agent Integration
 
@@ -34,17 +34,17 @@ The agent sends MCP messages via stdin, receives responses via stdout.
 Codex CLI reads `~/.codex/config.toml`. Add:
 
 ```toml
-[mcp_servers.mympc]
+[mcp_servers.mymcp]
 command = "python3"
 args = ["/usr/share/pac/dev/py/mympc/wrapper.py"]
-env = { MYMPC_LOG_LEVEL = "error", MYMPC_TIMEOUT_SECONDS = "30" }
+env = { MYMCP_LOG_LEVEL = "error", MYMCP_TIMEOUT_SECONDS = "30" }
 ```
 
 Verify Codex sees it:
 
 ```bash
 codex mcp list
-codex mcp get mympc
+codex mcp get mymcp
 ```
 
 **Workspace note (important for `local` tools):**

@@ -8,7 +8,7 @@ MODULE_SCOPE = "local"
 
 TOOLS = [
     {
-        "name": "scaffold_mkdir",
+        "name": "scaffold_dir",
         "description": "Create a directory under the workspace.",
         "inputSchema": {
             "type": "object",
@@ -17,7 +17,7 @@ TOOLS = [
         },
     },
     {
-        "name": "scaffold_write_text",
+        "name": "scaffold_file_write",
         "description": "Write a UTF-8 text file under the workspace (creates parent dirs).",
         "inputSchema": {
             "type": "object",
@@ -26,7 +26,7 @@ TOOLS = [
         },
     },
     {
-        "name": "scaffold_read_text",
+        "name": "scaffold_file_read",
         "description": "Read a UTF-8 text file under the workspace.",
         "inputSchema": {
             "type": "object",
@@ -35,7 +35,7 @@ TOOLS = [
         },
     },
     {
-        "name": "scaffold_where",
+        "name": "scaffold_info",
         "description": "Return the workspace_dir and module_dir seen by this tool.",
         "inputSchema": {"type": "object", "properties": {}},
     },
@@ -64,22 +64,22 @@ def execute(tool_name: str, arguments: dict[str, Any], context: dict | None = No
             return {"success": False, "error": "missing context.workspace_dir"}
         root = Path(workspace_dir)
 
-        if tool_name == "scaffold_mkdir":
+        if tool_name == "scaffold_dir":
             p = _safe_under_root(root, str(arguments["path"]))
             p.mkdir(parents=True, exist_ok=True)
             return {"success": True, "result": {"created": str(p)}}
 
-        if tool_name == "scaffold_write_text":
+        if tool_name == "scaffold_file_write":
             p = _safe_under_root(root, str(arguments["path"]))
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(str(arguments["content"]), encoding="utf-8")
             return {"success": True, "result": {"written": str(p)}}
 
-        if tool_name == "scaffold_read_text":
+        if tool_name == "scaffold_file_read":
             p = _safe_under_root(root, str(arguments["path"]))
             return {"success": True, "result": {"path": str(p), "content": p.read_text(encoding="utf-8")}}
 
-        if tool_name == "scaffold_where":
+        if tool_name == "scaffold_info":
             return {
                 "success": True,
                 "result": {"workspace_dir": workspace_dir, "module_dir": ctx.get("module_dir"), "module_scope": ctx.get("module_scope")},
