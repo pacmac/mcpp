@@ -3,6 +3,13 @@
 Work tracker for this repo. Keep `SCOPE.md`, `SPEC.md`, and `IMPLEMENT.md` as reference docs; track execution here.
 
 ## TODO
+- **Fix directory typo**: Rename `/usr/share/pac/dev/py/mympc/` → `/usr/share/pac/dev/py/mymcp/`
+  - Update bash wrapper path in `/usr/share/pac/dev/py/mycli`
+  - Update MCP server config in `~/.claude/settings.json` (wrapper.py path)
+  - Update MCP server config in `/root/.claude.json` if exists
+  - Update all documentation (SPEC.md, IMPLEMENT.md, SCOPE.md, CLAUDEMCP.md, MCP_POSTMORTEM.md, VERIFICATION_TESTS.md)
+  - Restart Claude Code after config changes
+  - Git repository moves with directory
 - Confirm minimum MCP surface area required by additional target CLIs (beyond Codex CLI)
 
 ## Testing Phase
