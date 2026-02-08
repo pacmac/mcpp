@@ -51,14 +51,13 @@ All tool names MUST follow the pattern: `<module>_<item>_<action>`
 
 **Examples:**
 - `fetch_page` - module=fetch, item=page, action implied (get)
-- `scaffold_dir` - module=scaffold, item=dir, action implied (create)
-- `scaffold_file_write` - module=scaffold, item=file, action=write
-- `scaffold_file_read` - module=scaffold, item=file, action=read
-- `scaffold_info` - module=scaffold, item=info, action implied (get)
 - `spi_init` - module=spi, item=project implied, action=init
+- `weather_forecast_get` - module=weather, item=forecast, action=get
+- `db_record_create` - module=db, item=record, action=create
+- `file_text_read` - module=file, item=text, action=read
 
 **Exposure:** Tools are exposed via Claude Code as `mcp__mymcp__<toolname>`
-- Example: `scaffold_dir` becomes `mcp__mymcp__scaffold_dir`
+- Example: `fetch_page` becomes `mcp__mymcp__fetch_page`
 - The `mcp__mymcp__` prefix is added automatically by Claude Code
 
 ### 1.3 Module Required Exports

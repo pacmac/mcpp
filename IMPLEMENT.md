@@ -106,10 +106,11 @@ The wrapper loads `main.py` as a package module, so relative imports like `from 
 - Bundled data lives under `module_dir` (parsers, prompts, static config).
 - Behavior does not depend on which workspace launched the wrapper.
 
-**Local module (workspace mutator): scaffold files/folders**
+**Local module (workspace mutator): create project templates**
 - `MODULE_SCOPE = "local"`
 - Treat `context["workspace_dir"]` as the root for all relative paths.
 - Create folders/files under that workspace directory.
+- Example: `spi_init` creates template files in `./spi/` under the workspace.
 
 ### 2.2 Module Testing
 
