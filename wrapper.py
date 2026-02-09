@@ -136,6 +136,66 @@ def _normalize_scope(mod: ModuleType) -> str:
     return scope if scope in {"local", "global"} else "local"
 
 
+_HELP_TOOL_SCHEMA: dict[str, Any] = {
+    "name": "help",
+    "description": (
+        "Lists available tools and their capabilities. "
+        "Call with no arguments to see all tools, or with tool=<name> to get "
+        "runtime options for a specific tool. Call this before using unfamiliar tools."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "tool": {
+                "type": "string",
+                "description": "Tool name to get detailed info for. Omit to list all tools.",
+            }
+        },
+    },
+}
+
+
+def _handle_help(
+    arguments: dict[str, Any],
+    tools_by_name: dict[str, ToolEntry],
+    workspace_dir: str,
+) -> dict[str, Any]:
+    tool_name = arguments.get("tool")
+
+    if not tool_name:
+        # List all modules' MODULE_ABOUT.
+        abouts: dict[str, str] = {}
+        for entry in tools_by_name.values():
+            about = getattr(entry.module, "MODULE_ABOUT", None)
+            if isinstance(about, str) and about.strip():
+                abouts[entry.tool_name] = about
+            else:
+                abouts[entry.tool_name] = entry.tool_schema.get("description", "")
+        return {"success": True, "result": {"tools": abouts}}
+
+    entry = tools_by_name.get(tool_name)
+    if entry is None:
+        return {"success": False, "error": f"Unknown tool: {tool_name}"}
+
+    get_info_fn = getattr(entry.module, "get_info", None)
+    if not callable(get_info_fn):
+        return {"success": True, "result": {"params": {}}}
+
+    ctx = {
+        "workspace_dir": workspace_dir,
+        "module_dir": entry.module_dir,
+        "module_scope": entry.module_scope,
+    }
+    try:
+        info = get_info_fn(ctx)
+    except Exception:
+        return {"success": False, "error": f"get_info() failed: {traceback.format_exc().rstrip()}"}
+
+    if not isinstance(info, dict):
+        return {"success": True, "result": {"params": {}}}
+    return {"success": True, "result": info}
+
+
 def discover_tools(tools_dir: Path) -> tuple[list[dict[str, Any]], dict[str, ToolEntry]]:
     tools_list: list[dict[str, Any]] = []
     tools_by_name: dict[str, ToolEntry] = {}
@@ -188,6 +248,8 @@ def discover_tools(tools_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Too
             if not isinstance(tool_name, str) or not tool_name.strip():
                 logging.error("skipping tool in %s: missing/invalid tool name", module_name)
                 continue
+            if tool_name == "help":
+                raise RuntimeError(f"reserved tool name 'help' used by module: {module_name}")
             if tool_name in tools_by_name:
                 raise RuntimeError(f"duplicate tool name: {tool_name}")
 
@@ -205,7 +267,10 @@ def discover_tools(tools_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Too
 
         loaded_modules += 1
 
-    logging.info("loaded %d modules with %d tools from %s", loaded_modules, loaded_tools, tools_dir)
+    # Register built-in help tool last.
+    tools_list.append(_HELP_TOOL_SCHEMA)
+
+    logging.info("loaded %d modules with %d tools (+help) from %s", loaded_modules, loaded_tools, tools_dir)
     return tools_list, tools_by_name
 
 
@@ -318,6 +383,17 @@ def handle_message(
             arguments = params.get("arguments") or {}
             if not isinstance(name, str) or not isinstance(arguments, dict):
                 return _jsonrpc_response(id_, error=_jsonrpc_error(-32602, "Invalid params"))
+
+            # Built-in help tool.
+            if name == "help":
+                help_res = _handle_help(arguments, tools_by_name, workspace_dir)
+                if help_res.get("success") is True:
+                    return _jsonrpc_response(id_, result={"content": [_content_text(help_res.get("result"))]})
+                err_text = help_res.get("error") or "Unknown error"
+                return _jsonrpc_response(
+                    id_,
+                    result={"content": [_content_text(f"Error: {err_text}")], "isError": True},
+                )
 
             entry = tools_by_name.get(name)
             if entry is None:

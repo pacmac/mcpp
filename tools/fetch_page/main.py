@@ -9,6 +9,7 @@ from typing import Any
 
 MODULE_NAME = "fetch_page"
 MODULE_SCOPE = "global"
+MODULE_ABOUT = "Fetches URL content with on-disk caching. Use when you need to retrieve and read web page content."
 
 TOOLS = [
     {
@@ -24,6 +25,19 @@ TOOLS = [
         },
     }
 ]
+
+
+def get_info(context: dict[str, Any] | None = None) -> dict[str, Any]:
+    module_dir = (context or {}).get("module_dir") or str(Path(__file__).resolve().parent)
+    cache_path, _ = _cache_paths(module_dir)
+    cache = _read_cache_yaml(cache_path)
+    return {
+        "params": {
+            "url": {"values": None, "default": None},
+            "max_chars": {"values": None, "default": 20000},
+        },
+        "cache_ttl_seconds": cache.get("ttl_seconds", 3600),
+    }
 
 
 def _load_user_agent(module_dir: str) -> str:

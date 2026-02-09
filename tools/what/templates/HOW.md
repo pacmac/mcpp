@@ -1,4 +1,4 @@
-# Plan
+# How
 
 ## Phases
 1. Phase 1:

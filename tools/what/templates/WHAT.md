@@ -1,4 +1,4 @@
-# Spec
+# What
 
 ## Goal
 - What are we building and why?

@@ -51,7 +51,7 @@ All tool names MUST follow the pattern: `<module>_<item>_<action>`
 
 **Examples:**
 - `fetch_page` - module=fetch, item=page, action implied (get)
-- `spi_init` - module=spi, item=project implied, action=init
+- `what_add` - module=what, item=project implied, action=init
 - `weather_forecast_get` - module=weather, item=forecast, action=get
 - `db_record_create` - module=db, item=record, action=create
 - `file_text_read` - module=file, item=text, action=read
@@ -115,6 +115,82 @@ TOOLS = [
 - Schema must follow JSON Schema standard
 - `inputSchema` describes expected arguments for that tool
 - Tools are registered globally; names must be unique across all modules
+
+#### `MODULE_ABOUT` (string)
+```python
+MODULE_ABOUT = "Captures web page state (metadata, text, links, forms, screenshots) for analysis. Use when you need to inspect how a page renders."
+```
+- **One-line description** of what the module does and when an agent should use it
+- Returned by the built-in `help` tool when listing all tools (see §2.5)
+- Should answer two questions: "What does this do?" and "When should I use it?"
+- Keep concise — this is scanned by the agent to pick the right tool
+
+#### `get_info(context: dict | None = None) -> dict` (function)
+```python
+def get_info(context=None):
+    return {
+        "params": {
+            "page": {
+                "values": ["home", "dashboard"],
+                "default": None
+            },
+            "device": {
+                "values": ["mobile", "desktop", "tablet"],
+                "default": "mobile"
+            }
+        },
+        "base_url": "https://myapp.com"
+    }
+```
+- **Returns runtime configuration** for this module's tools
+- Called by the built-in `help` tool when the agent requests info for a specific tool (see §2.5)
+- The `context` argument is the same context dict passed to `execute()` (see §1.3.1)
+
+**Response contract:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `params` | Yes | Dict keyed by `inputSchema` property names |
+| `params.<name>.values` | No | Available values: list (enumerable), dict (key-value mappings), or omitted (free-form) |
+| `params.<name>.default` | No | Default value applied if the parameter is omitted |
+| *(any other key)* | No | Free-form context the agent should know (e.g. `base_url`, `has_auth`) |
+
+**Rules:**
+- `params` key is required and must be a dict
+- Each key in `params` must correspond to a property in the tool's `inputSchema`
+- For modules with no dynamic config, return `{"params": {}}`
+- Free-form context keys must not collide with `params`
+
+**Simple module example (no dynamic config):**
+```python
+def get_info(context=None):
+    return {"params": {}}
+```
+
+**Complex module example (render):**
+```python
+def get_info(context=None):
+    workspace_dir = (context or {}).get("workspace_dir")
+    config = load_config(workspace_dir)
+    return {
+        "base_url": config["base_url"],
+        "has_auth": "auth" in config,
+        "params": {
+            "page": {
+                "values": list(config.get("pages", {}).keys()),
+                "default": None
+            },
+            "device": {
+                "values": ["mobile", "desktop", "tablet"],
+                "default": config["defaults"]["device"]
+            },
+            "args": {
+                "values": config["args"]["values"],
+                "default": {k: config["args"]["values"][k] for k in config["args"]["default"]}
+            }
+        }
+    }
+```
 
 #### `execute(tool_name: str, arguments: dict, context: dict | None = None) -> dict` (function)
 ```python
@@ -224,11 +300,11 @@ The `execute()` function MUST always return a dict with:
 
 Modules may optionally define:
 
-#### `MODULE_DESCRIPTION` (string)
+#### `MODULE_DESCRIPTION` (string) — DEPRECATED
 ```python
 MODULE_DESCRIPTION = "Provides weather data from OpenWeather API"
 ```
-Human-readable description of module purpose.
+Human-readable description of module purpose. **Superseded by `MODULE_ABOUT` (§1.3).** Retained for backward compatibility; ignored by the wrapper if `MODULE_ABOUT` is present.
 
 #### `DEPENDENCIES` (list of string)
 ```python
@@ -397,6 +473,51 @@ Some clients use a JSON-RPC lifecycle similar to LSP:
 2. Client sends an `exit` notification (no response); server exits.
 
 The wrapper should tolerate this lifecycle. It may also simply exit cleanly on stdin EOF.
+
+### 2.5 Built-in Help Tool
+
+The wrapper automatically registers a `help` tool that enables agent discoverability. This tool is **not** a module — it is built into the wrapper and has access to all loaded modules.
+
+**Tool schema:**
+```json
+{
+    "name": "help",
+    "description": "Lists available tools and their capabilities. Call with no arguments to see all tools, or with tool=<name> to get runtime options for a specific tool. Call this before using unfamiliar tools.",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "tool": {
+                "type": "string",
+                "description": "Tool name to get detailed info for. Omit to list all tools."
+            }
+        }
+    }
+}
+```
+
+**Behavior:**
+
+#### No arguments: `help()`
+
+Returns `MODULE_ABOUT` for every loaded module, keyed by module name:
+
+```json
+{
+    "tools": {
+        "render": "Captures web page state (metadata, text, links, forms, screenshots) for analysis. Use when you need to inspect how a page renders.",
+        "fetch_page": "Fetches URL content with on-disk caching. Use when you need to retrieve and read web page content.",
+        "what_add": "Scaffolds a named plan under what/<name>/ with WHAT.md, HOW.md, ACTIONS.md, TASKS.md. Use when starting a new structured project."
+    }
+}
+```
+
+#### With tool name: `help(tool="render")`
+
+Calls `get_info(context)` on the module that owns the named tool and returns the result directly.
+
+If the tool name is not found, returns an error.
+
+**Important:** The `help` tool name is reserved and must not be used by any module. The wrapper should error at startup if a module defines a tool named `help`.
 
 ## 3. Module Discovery Process
 

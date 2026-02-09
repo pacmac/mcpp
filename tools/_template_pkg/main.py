@@ -13,6 +13,7 @@ from .helper import VALUE
 
 MODULE_NAME = "template_pkg"  # change me
 MODULE_SCOPE = "global"  # or "local"
+MODULE_ABOUT = "Short description of what this module does and when to use it."  # change me
 
 TOOLS: list[dict[str, Any]] = [
     {
@@ -21,6 +22,11 @@ TOOLS: list[dict[str, Any]] = [
         "inputSchema": {"type": "object", "properties": {}},
     }
 ]
+
+
+def get_info(context: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return runtime configuration for agent discoverability (see SPEC.md §1.3)."""
+    return {"params": {}}
 
 
 def execute(tool_name: str, arguments: dict[str, Any], context: dict[str, Any] | None = None) -> dict[str, Any]:

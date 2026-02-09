@@ -20,7 +20,7 @@ def _write_req(stdin, obj: dict) -> None:
 
 
 class TestSpiInit(unittest.TestCase):
-    def test_spi_init_creates_templates(self) -> None:
+    def test_what_add_creates_templates(self) -> None:
         repo_dir = Path(__file__).resolve().parents[1]
         wrapper = repo_dir / "wrapper.py"
 
@@ -30,7 +30,7 @@ class TestSpiInit(unittest.TestCase):
 
             env = os.environ.copy()
             env["MYMPC_LOG_LEVEL"] = "error"
-            # Use real repo tools/ so spi templates are present.
+            # Use real repo tools/ so what templates are present.
             env["MYMPC_MODULES_PATH"] = str(repo_dir / "tools")
 
             p = subprocess.Popen(
@@ -54,13 +54,13 @@ class TestSpiInit(unittest.TestCase):
             )
             _read_json_line(p.stdout)
 
-            _write_req(p.stdin, {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "spi_init", "arguments": {}}})
+            _write_req(p.stdin, {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "what_add", "arguments": {"name": "test-plan"}}})
             r = _read_json_line(p.stdout)
             payload = json.loads(r["result"]["content"][0]["text"])
-            self.assertTrue((ws / "spi" / "SPEC.md").exists())
-            self.assertTrue((ws / "spi" / "PLAN.md").exists())
-            self.assertTrue((ws / "spi" / "IMPLEMENT.md").exists())
-            self.assertTrue((ws / "spi" / "TASKS.md").exists())
+            self.assertTrue((ws / "what" / "test-plan" / "WHAT.md").exists())
+            self.assertTrue((ws / "what" / "test-plan" / "HOW.md").exists())
+            self.assertTrue((ws / "what" / "test-plan" / "ACTIONS.md").exists())
+            self.assertTrue((ws / "what" / "test-plan" / "TASKS.md").exists())
             self.assertIn("written", payload)
 
             p.stdin.close()
