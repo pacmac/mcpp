@@ -31,12 +31,12 @@ For ANY MCP tool server to work, you MUST:
 
 ## The Problem
 
-**User Expectation:** mymcp is a common/shared MCP server that should be available from ANY project directory on this server. It should work seamlessly - when configured once per agent, the tools should be available everywhere without per-project configuration.
+**User Expectation:** mcpp is a common/shared MCP server that should be available from ANY project directory on this server. It should work seamlessly - when configured once per agent, the tools should be available everywhere without per-project configuration.
 
 **What Was Broken:**
-- mymcp MCP server was configured in `.claude.json` under `projects["/usr/share/pac/dev/py"]` (per-project config)
+- mcpp MCP server was configured in `.claude.json` under `projects["/usr/share/pac/dev/py"]` (per-project config)
 - This meant tools were only available in that specific directory
-- When working in other directories (like `/usr/share/pac/dev/py/mympc` or any other project), the tools were not available
+- When working in other directories (like `/usr/share/pac/dev/py/mcpp` or any other project), the tools were not available
 - Claude tried to use the tools but got "No such tool" errors
 
 **Core Principle:** MCP tools come with their own descriptions and schemas. Once configured, Claude should automatically know what tools are available and use them when appropriate based on those descriptions. NO additional documentation or per-folder configuration should be required.
@@ -66,7 +66,7 @@ For ANY MCP tool server to work, you MUST:
 ## What Was Done (Step 1)
 
 1. **Diagnosed the problem:**
-   - Checked `.claude.json` - mymcp only in `/usr/share/pac/dev/py` project config
+   - Checked `.claude.json` - mcpp only in `/usr/share/pac/dev/py` project config
    - Confirmed current directory had no MCP server config
    - Identified that per-project config was the wrong approach
 
@@ -75,16 +75,16 @@ For ANY MCP tool server to work, you MUST:
    - This applies to ALL projects, not per-directory
 
 3. **Applied the fix:**
-   - Added mymcp to global config in `~/.claude/settings.json`:
+   - Added mcpp to global config in `~/.claude/settings.json`:
    ```json
    "mcpServers": {
-     "mymcp": {
+     "mcpp": {
        "type": "stdio",
        "command": "python3",
-       "args": ["/usr/share/pac/dev/py/mympc/wrapper.py"],
+       "args": ["/usr/share/pac/dev/py/mcpp/wrapper.py"],
        "env": {
-         "MYMCP_LOG_LEVEL": "error",
-         "MYMCP_TIMEOUT_SECONDS": "30"
+         "MCPP_LOG_LEVEL": "error",
+         "MCPP_TIMEOUT_SECONDS": "30"
        }
      }
    }
@@ -105,13 +105,13 @@ For ANY MCP tool server to work, you MUST:
 3. Replace `"mcpServers": {}` with:
    ```json
    "mcpServers": {
-     "mympc": {
+     "mcpp": {
        "type": "stdio",
        "command": "python3",
-       "args": ["/usr/share/pac/dev/py/mympc/wrapper.py"],
+       "args": ["/usr/share/pac/dev/py/mcpp/wrapper.py"],
        "env": {
-         "MYMPC_LOG_LEVEL": "error",
-         "MYMPC_TIMEOUT_SECONDS": "30"
+         "MCPP_LOG_LEVEL": "error",
+         "MCPP_TIMEOUT_SECONDS": "30"
        }
      }
    }
@@ -129,7 +129,7 @@ For ANY MCP tool server to work, you MUST:
 **What to Check After Restart:**
 
 1. Start Claude Code in ANY project directory (not just `/usr/share/pac/dev/py`)
-2. Verify mympc tools are available by asking Claude to use one:
+2. Verify mcpp tools are available by asking Claude to use one:
    - Example: "fetch the page https://example.com"
    - Example: "create a directory called test-dir"
 3. Check that Claude can see the tools without being told what they are
@@ -153,7 +153,7 @@ Resume investigation plan at **Step 2**:
 - ✅ **Fix #2 Applied**: Removed blocking entries from `/root/.claude.json`
 - ✅ **VERIFICATION COMPLETE**: Tools now work across all project directories
 - ❌ **GLOBAL CONFIG DOESN'T WORK**: Claude Code auto-creates project entries with empty `mcpServers: {}`, blocking global config
-- ✅ **SOLUTION**: Use per-project mympc config for each directory (see below)
+- ✅ **SOLUTION**: Use per-project mcpp config for each directory (see below)
 
 ### Investigation Summary
 
@@ -169,8 +169,8 @@ Resume investigation plan at **Step 2**:
 
 1. **Global Config Exists** ✅
    - File: `~/.claude/settings.json`
-   - Contains: `mcpServers.mympc` with correct stdio config
-   - Path: `/usr/share/pac/dev/py/mympc/wrapper.py`
+   - Contains: `mcpServers.mcpp` with correct stdio config
+   - Path: `/usr/share/pac/dev/py/mcpp/wrapper.py`
 
 2. **wrapper.py Works** ✅
    - File exists and is executable
@@ -178,14 +178,14 @@ Resume investigation plan at **Step 2**:
 
 3. **MCP Connection Active** ✅
    - User ran `/mcp` command
-   - Output: `❯ mympc · ✔ connected`
-   - Source: `Local MCPs (/root/.claude.json [project: /usr/share/pac/dev/py/mympc])`
+   - Output: `❯ mcpp · ✔ connected`
+   - Source: `Local MCPs (/root/.claude.json [project: /usr/share/pac/dev/py/mcpp])`
 
 4. **Project Config Found** ✅
    - File: `/root/.claude.json`
    - Project: `/usr/share/pac/dev/py` (parent of current directory)
-   - Contains: `mcpServers.mympc` with identical stdio config
-   - Contains: `allowedTools` with `mcp__mympc__*` pattern pre-approved
+   - Contains: `mcpServers.mcpp` with identical stdio config
+   - Contains: `allowedTools` with `mcp__mcpp__*` pattern pre-approved
 
 ### The Mystery - SOLVED!
 
@@ -194,7 +194,7 @@ Resume investigation plan at **Step 2**:
 - MCP server is connected
 - Tools should be registered (wrapper loaded 6 tools)
 - Tools are pre-approved (allowedTools pattern)
-- But Claude cannot see any `mcp__mympc__*` tools in available tools list
+- But Claude cannot see any `mcp__mcpp__*` tools in available tools list
 
 ### ROOT CAUSE IDENTIFIED (2026-02-08)
 
@@ -252,16 +252,16 @@ Without this declaration, Claude Code doesn't know the server provides tools, so
 3. **spi** module (1 tool):
    - `spi_init` - Create SPEC/PLAN/IMPLEMENT/TASKS templates
 
-**Expected MCP names:** Claude Code should expose these as `mcp__mympc__<tool_name>`, e.g.:
-- `mcp__mympc__scaffold_mkdir`
-- `mcp__mympc__scaffold_write_text`
-- `mcp__mympc__fetch_page`
-- `mcp__mympc__spi_init`
+**Expected MCP names:** Claude Code should expose these as `mcp__mcpp__<tool_name>`, e.g.:
+- `mcp__mcpp__scaffold_mkdir`
+- `mcp__mcpp__scaffold_write_text`
+- `mcp__mcpp__fetch_page`
+- `mcp__mcpp__spi_init`
 - etc.
 
 ### The Fix
 
-**File:** `/usr/share/pac/dev/py/mympc/wrapper.py` line 296
+**File:** `/usr/share/pac/dev/py/mcpp/wrapper.py` line 296
 
 **Change:**
 ```python
@@ -291,32 +291,32 @@ Without this declaration, Claude Code doesn't know the server provides tools, so
 
 ## Claude's Verification Steps (Next Session)
 
-**When a new session starts, Claude should autonomously verify mympc is working:**
+**When a new session starts, Claude should autonomously verify mcpp is working:**
 
 1. **Check MCP server connection:**
-   - If user mentions anything about mympc or asks to use it, first check status
-   - Look for mympc tools in available tools list
-   - Tools should be prefixed with `mcp__mympc__*`
+   - If user mentions anything about mcpp or asks to use it, first check status
+   - Look for mcpp tools in available tools list
+   - Tools should be prefixed with `mcp__mcpp__*`
 
 2. **Verify tool availability:**
    - Should have access to these tools WITHOUT being told:
-     - `mcp__mympc__fetch_page` - Fetch URLs with on-disk cache
-     - `mcp__mympc__scaffold_mkdir` - Create directory under workspace
-     - `mcp__mympc__scaffold_write_text` - Write text file under workspace
-     - `mcp__mympc__scaffold_read_text` - Read text file under workspace
-     - `mcp__mympc__scaffold_where` - Show workspace/module directory context
-     - `mcp__mympc__spi_init` - Initialize SPEC/PLAN/IMPLEMENT/TASKS templates
+     - `mcp__mcpp__fetch_page` - Fetch URLs with on-disk cache
+     - `mcp__mcpp__scaffold_mkdir` - Create directory under workspace
+     - `mcp__mcpp__scaffold_write_text` - Write text file under workspace
+     - `mcp__mcpp__scaffold_read_text` - Read text file under workspace
+     - `mcp__mcpp__scaffold_where` - Show workspace/module directory context
+     - `mcp__mcpp__spi_init` - Initialize SPEC/PLAN/IMPLEMENT/TASKS templates
 
 3. **Test basic functionality:**
-   - Try calling `mcp__mympc__scaffold_where` to verify:
+   - Try calling `mcp__mcpp__scaffold_where` to verify:
      - Tool executes without errors
      - Returns correct `workspace_dir` (current working directory)
-     - Returns correct `module_dir` (mympc tools location)
+     - Returns correct `module_dir` (mcpp tools location)
      - Returns `module_scope` = "local"
 
 4. **Verify understanding:**
-   - When user asks to "fetch a page" or "create a directory", should automatically know to use mympc tools
-   - Should NOT need to be told "use the mympc tool"
+   - When user asks to "fetch a page" or "create a directory", should automatically know to use mcpp tools
+   - Should NOT need to be told "use the mcpp tool"
    - Should NOT need explanations of what each tool does (descriptions come from MCP)
 
 5. **If any verification fails:**

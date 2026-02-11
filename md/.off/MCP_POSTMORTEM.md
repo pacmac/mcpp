@@ -1,7 +1,7 @@
 # MCP Tool Integration - Postmortem & Critical Requirements
 
 **Date**: 2026-02-08
-**Project**: mymcp (stdio MCP server wrapper)
+**Project**: mcpp (stdio MCP server wrapper)
 **Issue**: MCP server connected but tools were invisible to Claude Code
 **Status**: ✅ RESOLVED
 
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The mymcp MCP server was properly configured and connected, but its tools were invisible to Claude Code. The root cause was a missing capability declaration in the MCP protocol `initialize` response. This postmortem documents the **critical requirements** that MUST be met for any MCP tool server to work.
+The mcpp MCP server was properly configured and connected, but its tools were invisible to Claude Code. The root cause was a missing capability declaration in the MCP protocol `initialize` response. This postmortem documents the **critical requirements** that MUST be met for any MCP tool server to work.
 
 **UPDATE (2026-02-08)**: After extensive investigation, discovered the **correct way** to configure MCP servers globally is using the Claude CLI with `--scope user` flag, NOT manual config file editing.
 
@@ -20,10 +20,10 @@ The mymcp MCP server was properly configured and connected, but its tools were i
 **The correct command to configure MCP servers globally:**
 
 ```bash
-claude mcp add mymcp --scope user \
-  --env MYMCP_LOG_LEVEL=error \
-  --env MYMCP_TIMEOUT_SECONDS=30 \
-  -- python3 /usr/share/pac/dev/py/mympc/wrapper.py
+claude mcp add mcpp --scope user \
+  --env MCPP_LOG_LEVEL=error \
+  --env MCPP_TIMEOUT_SECONDS=30 \
+  -- python3 /usr/share/pac/dev/py/mcpp/wrapper.py
 ```
 
 **Why this matters:**
@@ -40,8 +40,8 @@ claude mcp add mymcp --scope user \
 
 **Cleanup after manual configuration attempts:**
 If you previously tried manual config, remove old definitions:
-- Remove mymcp from top-level `mcpServers` in `/root/.claude.json`
-- Remove mymcp from per-project `mcpServers` in `/root/.claude.json` projects
+- Remove mcpp from top-level `mcpServers` in `/root/.claude.json`
+- Remove mcpp from per-project `mcpServers` in `/root/.claude.json` projects
 - The user-scoped definition in `~/.claude/settings.json` will take precedence
 
 ---
@@ -185,7 +185,7 @@ claude mcp add servername --scope user \
 {
   "projects": {
     "/tmp": {
-      "mcpServers": {}  // ❌ Empty object blocks global mympc config!
+      "mcpServers": {}  // ❌ Empty object blocks global mcpp config!
     }
   }
 }
@@ -196,17 +196,17 @@ When you start Claude Code from `/tmp`, it checks:
 2. Does it have mcpServers defined? → Yes (empty object)
 3. Result: Use project's mcpServers (empty), ignore global config
 
-**ONLY Working Solution**: Add mympc to per-project mcpServers for each directory you use:
+**ONLY Working Solution**: Add mcpp to per-project mcpServers for each directory you use:
 ```json
-// Add mympc to each project's mcpServers section
+// Add mcpp to each project's mcpServers section
 {
   "projects": {
     "/tmp": {
       "mcpServers": {
-        "mympc": {
+        "mcpp": {
           "type": "stdio",
           "command": "python3",
-          "args": ["/usr/share/pac/dev/py/mympc/wrapper.py"]
+          "args": ["/usr/share/pac/dev/py/mcpp/wrapper.py"]
         }
       }
     }
@@ -250,7 +250,7 @@ When you start Claude Code from `/tmp`, it checks:
 1. Verified global config - correct
 2. Verified wrapper.py execution - correct
 3. Verified MCP connection status - connected
-4. Checked available tools - none with `mcp__mympc__*` prefix
+4. Checked available tools - none with `mcp__mcpp__*` prefix
 5. **Found root cause**: Line 296 had `"capabilities": {}`
 
 ### Root Cause
@@ -293,7 +293,7 @@ if method == "initialize":
 1. Applied fix to wrapper.py
 2. Restarted Claude Code session (required to reconnect)
 3. User asked: "Fetch the page https://example.com"
-4. Claude automatically used `mcp__mympc__fetch_page` tool
+4. Claude automatically used `mcp__mcpp__fetch_page` tool
 5. Tool executed successfully
 6. ✅ **FIX CONFIRMED**
 
@@ -474,7 +474,7 @@ If cross-session testing reveals issues, add environment variable override:
 
 ```python
 # wrapper.py line 382
-workspace_dir = os.getenv("MYMPC_WORKSPACE_DIR")
+workspace_dir = os.getenv("MCPP_WORKSPACE_DIR")
 if not workspace_dir:
     workspace_dir = str(Path.cwd().resolve())
 ```
@@ -485,12 +485,12 @@ Then configure per-project in `.claude.json`:
   "projects": {
     "/specific/project": {
       "mcpServers": {
-        "mympc": {
+        "mcpp": {
           "type": "stdio",
           "command": "python3",
-          "args": ["/usr/share/pac/dev/py/mympc/wrapper.py"],
+          "args": ["/usr/share/pac/dev/py/mcpp/wrapper.py"],
           "env": {
-            "MYMPC_WORKSPACE_DIR": "/specific/project"
+            "MCPP_WORKSPACE_DIR": "/specific/project"
           }
         }
       }
@@ -510,7 +510,7 @@ Then configure per-project in `.claude.json`:
 **Steps:**
 1. Start Claude Code in any directory
 2. Ask: "fetch the page https://example.com"
-3. Verify Claude automatically uses `mcp__mympc__fetch_page` tool
+3. Verify Claude automatically uses `mcp__mcpp__fetch_page` tool
 
 **Expected**: Tool executes without needing to be told it exists
 **Status**: ✅ PASSED - tools are visible and auto-discovered
@@ -520,11 +520,11 @@ Then configure per-project in `.claude.json`:
 **Purpose**: Verify workspace_dir matches current session directory
 
 **Steps:**
-1. Start Claude Code in `/usr/share/pac/dev/py/mympc`
+1. Start Claude Code in `/usr/share/pac/dev/py/mcpp`
 2. Ask: "use scaffold_where to show workspace_dir"
 3. Compare result to `pwd`
 
-**Expected**: workspace_dir = `/usr/share/pac/dev/py/mympc`
+**Expected**: workspace_dir = `/usr/share/pac/dev/py/mcpp`
 **Status**: ✅ PASSED - workspace_dir correctly captured
 
 ### Test 3: Cross-Session Workspace (⏸️ PENDING)
@@ -542,12 +542,12 @@ Then configure per-project in `.claude.json`:
    - Ask: "use scaffold_where to show workspace_dir"
    - Expected: `{"workspace_dir": "/tmp", ...}`
 4. **Test write operation**:
-   - Ask: "create a directory called test-mympc-verification"
-   - Expected: Directory created in `/tmp/test-mympc-verification`
-   - Verify: `ls -la /tmp/test-mympc-verification`
+   - Ask: "create a directory called test-mcpp-verification"
+   - Expected: Directory created in `/tmp/test-mcpp-verification`
+   - Verify: `ls -la /tmp/test-mcpp-verification`
 5. **Cleanup**:
    ```bash
-   rm -rf /tmp/test-mympc-verification
+   rm -rf /tmp/test-mcpp-verification
    ```
 
 **Expected Results:**
@@ -557,7 +557,7 @@ Then configure per-project in `.claude.json`:
 
 **If Test FAILS** (workspace_dir stuck at old location):
 - Indicates Claude Code reuses wrapper processes
-- Must implement `MYMPC_WORKSPACE_DIR` environment variable override
+- Must implement `MCPP_WORKSPACE_DIR` environment variable override
 - Document limitation for multi-project workflows
 
 ### Test 4: Multi-Project Workflow (⏸️ PENDING)
@@ -566,9 +566,9 @@ Then configure per-project in `.claude.json`:
 
 **Steps:**
 1. Start Claude Code in `/project-a/`
-2. Use mympc tools to create files
+2. Use mcpp tools to create files
 3. Exit and start Claude Code in `/project-b/`
-4. Use mympc tools to create files
+4. Use mcpp tools to create files
 5. Verify files created in correct project directories
 
 **Expected**: Each session operates on its own workspace independently

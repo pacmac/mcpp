@@ -14,9 +14,9 @@ The wrapper reads from stdin and writes to stdout. No command-line arguments nee
 ### 1.2 Environment Variables
 
 Supported env vars:
-- `MYMCP_MODULES_PATH`: tools directory (default: `tools`)
-- `MYMCP_LOG_LEVEL`: `debug|info|warning|error` (default: `info`)
-- `MYMCP_TIMEOUT_SECONDS`: per-tool timeout in seconds (default: `30`)
+- `MCPP_MODULES_PATH`: tools directory (default: `tools`)
+- `MCPP_LOG_LEVEL`: `debug|info|warning|error` (default: `info`)
+- `MCPP_TIMEOUT_SECONDS`: per-tool timeout in seconds (default: `30`)
 
 ### 1.3 Agent Integration
 
@@ -34,17 +34,17 @@ The agent sends MCP messages via stdin, receives responses via stdout.
 Codex CLI reads `~/.codex/config.toml`. Add:
 
 ```toml
-[mcp_servers.mymcp]
+[mcp_servers.mcpp]
 command = "python3"
-args = ["/usr/share/pac/dev/py/mympc/wrapper.py"]
-env = { MYMCP_LOG_LEVEL = "error", MYMCP_TIMEOUT_SECONDS = "30" }
+args = ["/usr/share/pac/dev/py/mcpp/mcpp.py"]
+env = { MCPP_LOG_LEVEL = "error", MCPP_TIMEOUT_SECONDS = "30" }
 ```
 
 Verify Codex sees it:
 
 ```bash
 codex mcp list
-codex mcp get mymcp
+codex mcp get mcpp
 ```
 
 **Workspace note (important for `local` tools):**
@@ -93,7 +93,7 @@ mycli call spi_init
 The wrapper script (`/usr/share/pac/dev/py/mycli`):
 ```bash
 #!/usr/bin/env bash
-exec python3 /usr/share/pac/dev/py/mympc/cli.py "$@"
+exec python3 /usr/share/pac/dev/py/mcpp/cli.py "$@"
 ```
 
 #### 1.4.3 How It Works
@@ -163,9 +163,9 @@ Error: Failed to fetch URL: connection timeout
 #### 1.4.8 Environment Variables
 
 Same as wrapper.py:
-- `MYMCP_MODULES_PATH` - tools directory (default: `tools`)
-- `MYMCP_LOG_LEVEL` - `debug|info|warning|error` (default: `error` for CLI)
-- `MYMCP_TIMEOUT_SECONDS` - per-tool timeout (default: `30`)
+- `MCPP_MODULES_PATH` - tools directory (default: `tools`)
+- `MCPP_LOG_LEVEL` - `debug|info|warning|error` (default: `error` for CLI)
+- `MCPP_TIMEOUT_SECONDS` - per-tool timeout (default: `30`)
 
 #### 1.4.9 Limitations
 

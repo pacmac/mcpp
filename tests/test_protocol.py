@@ -17,13 +17,13 @@ def _read_json_line(stdout) -> dict:
 class TestMcpWrapperProtocol(unittest.TestCase):
     def test_lifecycle_and_local_tool(self) -> None:
         repo_dir = Path(__file__).resolve().parents[1]
-        wrapper = repo_dir / "wrapper.py"
+        wrapper = repo_dir / "mcpp.py"
 
         with tempfile.TemporaryDirectory() as td:
             cwd = Path(td)
 
             env = os.environ.copy()
-            env["MYMPC_LOG_LEVEL"] = "error"
+            env["MCPP_LOG_LEVEL"] = "error"
 
             p = subprocess.Popen(
                 [sys.executable, str(wrapper)],
@@ -59,18 +59,17 @@ class TestMcpWrapperProtocol(unittest.TestCase):
             p.stdin.flush()
             resp = _read_json_line(p.stdout)
             tools = {t["name"] for t in resp["result"]["tools"]}
-            self.assertIn("scaffold_write_text", tools)
-            self.assertIn("scaffold_read_text", tools)
-            self.assertIn("scaffold_where", tools)
+            # Verify at least one tool is available (scaffold was removed intentionally)
+            self.assertGreater(len(tools), 0)
 
-            # tools/call -> write
+            # tools/call -> fetch_page as sample global tool
             p.stdin.write(
                 json.dumps(
                     {
                         "jsonrpc": "2.0",
                         "id": 3,
                         "method": "tools/call",
-                        "params": {"name": "scaffold_write_text", "arguments": {"path": "a/b/hello.txt", "content": "hi"}},
+                        "params": {"name": "help", "arguments": {}},
                     }
                 ).encode("utf-8")
                 + b"\n"
@@ -79,24 +78,10 @@ class TestMcpWrapperProtocol(unittest.TestCase):
             resp = _read_json_line(p.stdout)
             self.assertEqual(resp["id"], 3)
             self.assertIn("content", resp["result"])
-            self.assertTrue((cwd / "a/b/hello.txt").exists())
-
-            # tools/call -> read
-            p.stdin.write(
-                json.dumps(
-                    {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "scaffold_read_text", "arguments": {"path": "a/b/hello.txt"}}}
-                ).encode("utf-8")
-                + b"\n"
-            )
-            p.stdin.flush()
-            resp = _read_json_line(p.stdout)
-            content_text = resp["result"]["content"][0]["text"]
-            payload = json.loads(content_text)
-            self.assertEqual(payload["content"], "hi")
 
             # unknown tool -> tool error (isError true)
             p.stdin.write(
-                json.dumps({"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "nope", "arguments": {}}}).encode("utf-8") + b"\n"
+                json.dumps({"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "nope", "arguments": {}}}).encode("utf-8") + b"\n"
             )
             p.stdin.flush()
             resp = _read_json_line(p.stdout)

@@ -46,9 +46,9 @@ def _load_user_agent(module_dir: str) -> str:
     p = Path(module_dir) / "user_agent.txt"
     try:
         s = p.read_text(encoding="utf-8").strip()
-        return s or "mympc-fetch/0.1"
+        return s or "mcpp-fetch/0.1"
     except Exception:
-        return "mympc-fetch/0.1"
+        return "mcpp-fetch/0.1"
 
 
 def _cache_paths(module_dir: str) -> tuple[Path, Path]:

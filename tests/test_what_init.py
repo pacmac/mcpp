@@ -22,16 +22,16 @@ def _write_req(stdin, obj: dict) -> None:
 class TestSpiInit(unittest.TestCase):
     def test_what_add_creates_templates(self) -> None:
         repo_dir = Path(__file__).resolve().parents[1]
-        wrapper = repo_dir / "wrapper.py"
+        wrapper = repo_dir / "mcpp.py"
 
         with tempfile.TemporaryDirectory() as td:
             ws = Path(td) / "ws"
             ws.mkdir()
 
             env = os.environ.copy()
-            env["MYMPC_LOG_LEVEL"] = "error"
+            env["MCPP_LOG_LEVEL"] = "error"
             # Use real repo tools/ so what templates are present.
-            env["MYMPC_MODULES_PATH"] = str(repo_dir / "tools")
+            env["MCPP_MODULES_PATH"] = str(repo_dir / "tools")
 
             p = subprocess.Popen(
                 [sys.executable, str(wrapper)],

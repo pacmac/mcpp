@@ -63,7 +63,7 @@ For direct human usage without an agent, a CLI wrapper (`cli.py`) provides comma
 ┌─────────────────────────────────────────────────────────────────┐
 │ Human User                                                      │
 │                                                                 │
-│ Command: mymcp call fetch_page --url https://example.com       │
+│ Command: mcpp call fetch_page --url https://example.com       │
 └────────────────────┬────────────────────────────────────────────┘
                      │
 ┌────────────────────▼────────────────────────────────────────────┐
@@ -129,7 +129,7 @@ Some tools are workspace-scoped (local) and need the wrapper startup working dir
 
 Examples:
 - `global`: a fetcher/service module that retrieves remote pages (does not depend on the caller workspace).
-- `local`: a scaffolding/file-ops module that creates folders/files under the caller workspace.
+- `local`: a workspace-scoped module that operates on the caller's workspace directory (e.g., file operations, code generation, workspace-specific state).
 
 ### 3.4 Lifecycle
 - **Stateless**: No persistent state between calls
@@ -152,10 +152,10 @@ Examples:
 **MOST IMPORTANT**: To configure this MCP server globally across all projects, use:
 
 ```bash
-claude mcp add mymcp --scope user \
-  --env MYMCP_LOG_LEVEL=error \
-  --env MYMCP_TIMEOUT_SECONDS=30 \
-  -- python3 /absolute/path/to/wrapper.py
+claude mcp add mcpp --scope user \
+  --env MCPP_LOG_LEVEL=error \
+  --env MCPP_TIMEOUT_SECONDS=30 \
+  -- python3 /absolute/path/to/mcpp.py
 ```
 
 ### 5.2 Why --scope user Matters

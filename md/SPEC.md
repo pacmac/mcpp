@@ -20,7 +20,7 @@ MODULE_SCOPE = "local"  # or "global"
 
 Examples:
 - `global`: a "fetch_page" service module that retrieves remote content. Its bundled parsers/config live under `module_dir`, and any optional caches/logs are written under `module_dir` so behavior is independent of which workspace launched the wrapper.
-- `local`: a "scaffold_project" module that creates folders/files. It treats the wrapper startup working directory (`workspace_dir`) as the root of all relative paths and writes inside that tree.
+- `local`: a workspace-scoped tool that operates on files/state within the user's workspace directory. Example: a code generator or file manipulation tool.
 
 ### 1.1 Module File Location
 ```
@@ -56,9 +56,9 @@ All tool names MUST follow the pattern: `<module>_<item>_<action>`
 - `db_record_create` - module=db, item=record, action=create
 - `file_text_read` - module=file, item=text, action=read
 
-**Exposure:** Tools are exposed via Claude Code as `mcp__mymcp__<toolname>`
-- Example: `fetch_page` becomes `mcp__mymcp__fetch_page`
-- The `mcp__mymcp__` prefix is added automatically by Claude Code
+**Exposure:** Tools are exposed via Claude Code as `mcp__mcpp__<toolname>`
+- Example: `fetch_page` becomes `mcp__mcpp__fetch_page`
+- The `mcp__mcpp__` prefix is added automatically by Claude Code
 
 ### 1.3 Module Required Exports
 

@@ -28,7 +28,7 @@ import importlib.util
 
 
 PROTOCOL_VERSION = "2024-11-05"
-SERVER_INFO = {"name": "mymcp-wrapper", "version": "0.1.0"}
+SERVER_INFO = {"name": "mcpp", "version": "0.1.0"}
 
 _shutdown_requested = False
 
@@ -56,7 +56,7 @@ class ToolEntry:
 
 
 def _setup_logging() -> None:
-    level_s = os.getenv("MYMCP_LOG_LEVEL", "info").lower().strip()
+    level_s = os.getenv("MCPP_LOG_LEVEL", "info").lower().strip()
     level = {
         "debug": logging.DEBUG,
         "info": logging.INFO,
@@ -72,13 +72,13 @@ def _setup_logging() -> None:
 
 def _load_config() -> tuple[Path, int]:
     base_dir = Path(__file__).resolve().parent
-    modules_path_s = os.getenv("MYMCP_MODULES_PATH", "tools").strip()
+    modules_path_s = os.getenv("MCPP_MODULES_PATH", "tools").strip()
     tools_dir = Path(modules_path_s)
     if not tools_dir.is_absolute():
         tools_dir = (base_dir / tools_dir).resolve()
 
     try:
-        timeout_s = int(os.getenv("MYMCP_TIMEOUT_SECONDS", "30").strip())
+        timeout_s = int(os.getenv("MCPP_TIMEOUT_SECONDS", "30").strip())
     except Exception:
         timeout_s = 30
     return tools_dir, timeout_s
@@ -100,7 +100,7 @@ def _iter_module_sources(tools_dir: Path) -> list[ModuleSource]:
         main_py = p / "main.py"
         if not main_py.exists() or not main_py.is_file():
             continue
-        out.append(ModuleSource(import_name=f"mympc_tools.{p.name}", entry_path=main_py, module_dir=p))
+        out.append(ModuleSource(import_name=f"mcpp_tools.{p.name}", entry_path=main_py, module_dir=p))
     return out
 
 
@@ -117,9 +117,9 @@ def _import_module_from_source(src: ModuleSource) -> ModuleType:
 
 
 def _ensure_tools_namespace(tools_dir: Path) -> None:
-    # Directory modules are loaded as packages under "mympc_tools.<name>" and may use relative imports.
-    # Ensure the parent package "mympc_tools" exists as a namespace package.
-    pkg_name = "mympc_tools"
+    # Directory modules are loaded as packages under "mcpp_tools.<name>" and may use relative imports.
+    # Ensure the parent package "mcpp_tools" exists as a namespace package.
+    pkg_name = "mcpp_tools"
     if pkg_name in sys.modules:
         return
     pkg = ModuleType(pkg_name)

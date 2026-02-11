@@ -42,12 +42,12 @@ def _drain_and_close(p: subprocess.Popen) -> None:
 class TestWrapperTestingPhase(unittest.TestCase):
     def setUp(self) -> None:
         self.repo_dir = Path(__file__).resolve().parents[1]
-        self.wrapper = self.repo_dir / "wrapper.py"
+        self.wrapper = self.repo_dir / "mcpp.py"
 
     def _start(self, *, cwd: Path, tools_dir: Path) -> subprocess.Popen:
         env = os.environ.copy()
-        env["MYMPC_LOG_LEVEL"] = "error"
-        env["MYMPC_MODULES_PATH"] = str(tools_dir)
+        env["MCPP_LOG_LEVEL"] = "error"
+        env["MCPP_MODULES_PATH"] = str(tools_dir)
         return subprocess.Popen(
             [sys.executable, str(self.wrapper)],
             cwd=str(cwd),
@@ -59,7 +59,7 @@ class TestWrapperTestingPhase(unittest.TestCase):
 
     def test_protocol_errors(self) -> None:
         # Validate JSON-RPC errors and method-not-found.
-        from wrapper import handle_message
+        from mcpp import handle_message
 
         tools_list: list[dict] = []
         tools_by_name: dict = {}

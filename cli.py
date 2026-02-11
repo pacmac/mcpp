@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Human CLI for mymcp MCP server.
+Human CLI for mcpp MCP server.
 
 Usage:
     python3 cli.py list
@@ -56,7 +56,7 @@ def _communicate_with_wrapper(messages: list[dict]) -> list[dict]:
     Returns:
         List of JSON-RPC response messages
     """
-    wrapper_path = Path(__file__).parent / "wrapper.py"
+    wrapper_path = Path(__file__).parent / "mcpp.py"
 
     # Spawn wrapper as subprocess
     proc = subprocess.Popen(
@@ -106,7 +106,7 @@ def cmd_list() -> int:
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "mymcp-cli", "version": "1.0.0"},
+                "clientInfo": {"name": "mcpp-cli", "version": "1.0.0"},
             },
         },
         {
@@ -175,7 +175,7 @@ def cmd_call(tool_name: str, tool_args: dict[str, Any]) -> int:
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "mymcp-cli", "version": "1.0.0"},
+                "clientInfo": {"name": "mcpp-cli", "version": "1.0.0"},
             },
         },
         {
@@ -228,7 +228,7 @@ def cmd_call(tool_name: str, tool_args: dict[str, Any]) -> int:
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Human CLI for mymcp MCP server",
+        description="Human CLI for mcpp MCP server",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

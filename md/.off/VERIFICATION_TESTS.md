@@ -1,6 +1,6 @@
 # MCP Server Verification Tests
 
-**Purpose**: Comprehensive test procedures to verify mymcp MCP server works correctly.
+**Purpose**: Comprehensive test procedures to verify mcpp MCP server works correctly.
 
 **Last Updated**: 2026-02-08
 
@@ -22,7 +22,7 @@
 
 **Prerequisites**:
 - Claude Code installed and configured
-- mymcp configured in `~/.claude/settings.json`
+- mcpp configured in `~/.claude/settings.json`
 
 **Procedure**:
 
@@ -31,7 +31,7 @@
 3. Observe Claude's behavior
 
 **Expected Result**:
-- Claude automatically uses `mcp__mymcp__fetch_page` tool
+- Claude automatically uses `mcp__mcpp__fetch_page` tool
 - No need to tell Claude the tool exists
 - Page content is fetched and displayed
 
@@ -41,7 +41,7 @@
 - ✅ Fetch completes successfully
 
 **If Test Fails**:
-- Check `/mcp` command to see if mymcp shows connected
+- Check `/mcp` command to see if mcpp shows connected
 - Verify wrapper.py has `"capabilities": {"tools": {}}`
 - Restart Claude Code session
 - See MCP_POSTMORTEM.md "Quick Diagnosis Guide"
@@ -55,7 +55,7 @@
 **What it tests**: Individual tool functionality works correctly
 
 **Prerequisites**:
-- mymcp tools available
+- mcpp tools available
 - Internet connectivity (for fetch_page)
 
 ### 2a: fetch_page tool
