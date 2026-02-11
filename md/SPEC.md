@@ -595,3 +595,104 @@ Enables verbose logging of all MCP messages and execution details.
 - **Isolation**: Each module is independent; failures don't affect others
 - **Timeout protection**: Prevents infinite loops
 - **Error messages**: Don't leak sensitive info in error responses
+
+## 9. MCP Specification Compliance
+
+### 9.1 Current Status
+
+mcpp implements a **minimal MCP server** based on protocol version **2024-11-05**. The latest official MCP specifications are:
+- 2025-11-25 (latest)
+- 2025-06-18 (stable with structured outputs & OAuth)
+
+**Current implementation:** Core protocol features only (initialize, tools/list, tools/call)
+
+### 9.2 Feature Comparison
+
+| Feature | Status | Impact |
+|---------|--------|--------|
+| **JSON-RPC 2.0 transport** | ✓ Implemented | Baseline protocol |
+| **Stdio transport** | ✓ Implemented | Communication layer |
+| **Initialize handshake** | ✓ Implemented | Server setup |
+| **Tools listing** | ✓ Implemented | Tool discovery |
+| **Tool execution** | ✓ Implemented | Core functionality |
+| **Error handling** | ✓ Implemented | Fault tolerance |
+| **Structured outputs** | ✗ Not implemented | Tools return text; clients parse JSON strings |
+| **Resources** | ✗ Not implemented | Wrapper is tools-only by design |
+| **Prompts** | ✗ Not implemented | Out of scope for this project |
+| **Progress notifications** | ✗ Not implemented | Optional; useful for long-running tools (>10s) |
+| **Request cancellation** | ✗ Not implemented | Optional; timeout mechanism provides protection |
+| **OAuth support** | ✗ Not implemented | Module responsibility, not wrapper concern |
+
+### 9.3 Known Gaps & Recommendations
+
+#### Gap 1: Protocol Version Negotiation
+**Current behavior:** mcpp reports version `2024-11-05` but ignores client's proposed version.
+
+```json
+// Client proposes:
+{ "protocolVersion": "2025-06-18", ... }
+
+// mcpp ignores and always responds:
+{ "protocolVersion": "2024-11-05", ... }
+```
+
+**Risk:** Clients may expect features from their proposed version that don't exist, causing silent failures.
+
+**Recommendation:** Update to protocol version `2025-06-18` and implement basic version negotiation:
+- Accept client's proposed version if supported
+- Return error if no common version exists
+- Update code: line 30 `PROTOCOL_VERSION = "2025-06-18"`
+
+#### Gap 2: Unstructured Tool Output Format
+**Current behavior:** Tool results are converted to JSON strings (text type).
+
+```json
+// Tool returns:
+{ "success": true, "result": {"temp": 72, "condition": "sunny"} }
+
+// mcpp sends to client as:
+{
+  "content": [{
+    "type": "text",
+    "text": "{\"temp\": 72, \"condition\": \"sunny\"}"
+  }]
+}
+```
+
+**Impact:** Client must parse JSON string back to object; loses type information.
+
+**Recommendation (Medium Priority):** Implement structured output support.
+- Add `outputSchema` to tool definitions (optional)
+- Return `type: "object"` for structured results instead of `type: "text"`
+- Clients can use structured data directly without parsing
+
+#### Gap 3: No Progress Reporting for Long-Running Tools
+**Current behavior:** Client has no visibility into tool execution progress.
+
+**Impact:** For tools taking >10 seconds, client may timeout or appear hung.
+
+**Recommendation (Low Priority):** Optional feature for modules that need it.
+- Send `notifications/progress` during execution
+- Allows tools to report intermediate status
+- Requires changes to tool execution flow
+
+### 9.4 Scope Decision: Tools-Only Server
+
+mcpp intentionally does NOT implement:
+- **Resources** (read-only data exposure) — out of scope
+- **Prompts** (instruction templates) — out of scope
+- **OAuth** (user authentication) — module responsibility
+- **Request cancellation** — timeout mechanism is sufficient
+
+These are appropriate for fuller MCP implementations but not for mcpp's minimal design.
+
+### 9.5 Next Steps for Full Compliance
+
+| Priority | Item | Effort | Benefit |
+|----------|------|--------|---------|
+| 1 | Update to protocol 2025-06-18 | Small | Future-proof, align with spec |
+| 2 | Implement version negotiation | Small | Prevent silent incompatibilities |
+| 3 | Add structured output support | Medium | Better client integration |
+| 4 | Add progress notifications | Medium | UX for long tasks |
+
+For now, mcpp is **fit-for-purpose as a tools-only MCP server** suitable for most use cases.

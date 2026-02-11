@@ -24,14 +24,23 @@ TOOLS = [
     }
 ]
 
+def _ensure_rendermod_importable() -> None:
+    """Add rendermod to sys.path, looking relative to this module location."""
+    # Try to find rendermod as sibling of mcpp
+    mcpp_dir = Path(__file__).resolve().parent.parent.parent  # tools/render/main.py -> mcpp
+    parent_dir = mcpp_dir.parent  # mcpp -> parent
+    rendermod_dir = parent_dir / "rendermod"
+    
+    if rendermod_dir.exists() and str(rendermod_dir) not in sys.path:
+        sys.path.insert(0, str(parent_dir))
+
+
 def get_info(context: dict[str, Any] | None = None) -> dict[str, Any]:
     workspace_dir = (context or {}).get("workspace_dir")
     if not workspace_dir:
         return {"params": {}}
 
-    lib_dir = "/usr/share/pac/dev/py"
-    if lib_dir not in sys.path:
-        sys.path.insert(0, lib_dir)
+    _ensure_rendermod_importable()
 
     try:
         from rendermod.config import load_config
@@ -77,10 +86,7 @@ def execute(tool_name: str, arguments: dict[str, Any], context: dict | None = No
         override_args = arguments.get("args")
         workspace_dir = (context or {}).get("workspace_dir")
 
-        # Make rendermod importable.
-        lib_dir = "/usr/share/pac/dev/py"
-        if lib_dir not in sys.path:
-            sys.path.insert(0, lib_dir)
+        _ensure_rendermod_importable()
 
         from rendermod.config import load_config
         from rendermod.renderer import Renderer

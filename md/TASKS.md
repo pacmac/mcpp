@@ -3,7 +3,11 @@
 Work tracker for this repo. Keep `SCOPE.md`, `SPEC.md`, and `IMPLEMENT.md` as reference docs; track execution here.
 
 ## TODO
-- (empty)
+- **MCP Specification Compliance Audit**: Document gaps and plan upgrades
+  - Current protocol version: 2024-11-05 (8+ months behind latest 2025-11-25)
+  - Missing features: structured outputs, progress notifications, version negotiation
+  - See `§9 MCP Specification Compliance` in SPEC.md for details
+  - Priority items: (1) update to 2025-06-18, (2) implement version negotiation, (3) structured outputs
 
 - (passed) Protocol lifecycle smoke test: `initialize` -> `notifications/initialized` (ignored) -> `tools/list` -> `tools/call` -> `shutdown` -> `exit`
 - (passed) Tool result conformance tests: `content[]`, `isError`, and protocol-level JSON-RPC errors
