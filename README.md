@@ -70,14 +70,14 @@ python3 /path/to/mcpp/mcpp.py
 
 ### 3. Orient the Agent
 
-Before diving into tasks, show the agent your project and let it build context:
+When starting work on a new project, have the agent explore it first:
 
 ```
-> Read this project's README, explore the structure, and add what you
-> learn to your project notes.
+> Discover what this project is about, including its structure,
+> and add what you learn to your project notes.
 ```
 
-This gives the agent a working understanding of how tools are organized, what's available, and how to extend things -- before it needs to act on any of that.
+This lets the agent build its own understanding of the codebase -- what's where, how things connect, what conventions are used -- and persist that context for future sessions.
 
 ### 4. Use It
 
