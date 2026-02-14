@@ -495,7 +495,7 @@ mcpp implements the [Model Context Protocol](https://modelcontextprotocol.io/) o
 
 ## Inspired By
 
-This project was inspired by [Andreas Spiess](https://www.youtube.com/@AndreasSpiess) and his [video on MCP server architecture](https://www.youtube.com/watch?v=5DG0-_lseR4).
+This project was inspired by [Andreas Spiess](https://www.youtube.com/@AndreasSpiess) and his [video on AI-assisted coding](https://www.youtube.com/watch?v=5DG0-_lseR4).
 
 ## License
 
