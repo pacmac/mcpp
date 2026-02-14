@@ -15,7 +15,7 @@ mcpp inverts this. You register tool modules in a single `tools.yaml` file. Each
 - **Lazy loading** -- Python code is only imported on first call, not at startup. A broken module won't prevent the server from starting
 - **External tools** -- modules can live anywhere on disk; just point to them in `tools.yaml`
 - **Dual-audience responses** -- tools can return both human-readable display text and structured data for the agent, using MCP content annotations
-- **Multi-user, multi-project** -- built-in `plan` tool tracks tasks per user per project from a single shared database
+- **Multi-user, multi-project** -- the [`mcpp-plan`](https://github.com/pacmac/mcpp-plan) tool tracks tasks per user per project from a single shared database
 - **Timeout enforcement** -- per-call timeout via `SIGALRM` prevents runaway tools from blocking the server
 - **Built-in help** -- agents can query `help` to discover available tools and their runtime configuration without importing any tool code
 - **Human CLI** -- `cli.py` provides a command-line interface for testing and direct use
@@ -27,9 +27,21 @@ mcpp inverts this. You register tool modules in a single `tools.yaml` file. Each
 Clone the repo and ensure Python 3.10+ is available. The only external dependency is `pyyaml`.
 
 ```bash
-git clone <repo-url> mcpp
+git clone https://github.com/pacmac/mcpp.git
 cd mcpp
 pip install pyyaml
+```
+
+To include the [plan](https://github.com/pacmac/mcpp-plan) task manager (optional):
+
+```bash
+git clone https://github.com/pacmac/mcpp-plan.git ../mcpp-plan
+```
+
+Then add it to `tools.yaml`:
+```yaml
+modules:
+  - path: ../mcpp-plan
 ```
 
 ### 2. Configure Your Agent
@@ -149,7 +161,7 @@ tools:
 | `about` | No | One-line description shown by the `help` tool |
 | `tools` | Yes | List of tool definitions, each with `name`, `description`, and `inputSchema` |
 
-A single module can define multiple tools. The `plan` module defines 19 tools under one module name.
+A single module can define multiple tools. The [`mcpp-plan`](https://github.com/pacmac/mcpp-plan) module defines 19 tools under one module name.
 
 **Tool naming convention:** `<module>_<entity>_<action>`, e.g. `plan_task_new`, `plan_step_done`.
 
@@ -218,11 +230,11 @@ The top-level `tools.yaml` lists which modules to load:
 
 ```yaml
 modules:
-  - path: tools/fetch_page      # built-in, relative to tools.yaml
-  - path: tools/render          # built-in
-  - path: tools/what            # built-in
-  - path: ../agentmod           # external module, anywhere on disk
-  - path: /opt/custom/my_tool   # absolute paths work too
+  - path: tools/fetch_page          # built-in, relative to tools.yaml
+  - path: tools/render              # built-in
+  - path: tools/what                # built-in
+  - path: ../mcpp-plan              # external: github.com/pacmac/mcpp-plan
+  - path: /opt/custom/my_tool       # absolute paths work too
 ```
 
 Paths are resolved relative to the directory containing `tools.yaml`. Directories starting with `_` are ignored (used for templates).
@@ -305,13 +317,13 @@ modules:
   - path: ../../other-repo/tool-module   # relative to tools.yaml
 ```
 
-This is how the `plan` tool (agentmod) is integrated -- it lives in a separate repository and is referenced as `../agentmod` in the registry. The module has its own git history, tests, and release cycle. mcpp just loads it.
+This is how the [`mcpp-plan`](https://github.com/pacmac/mcpp-plan) tool is integrated -- it lives in a separate repository and is referenced by path in the registry. The module has its own git history, tests, and release cycle. mcpp just loads it.
 
 **Requirements for an external tool are identical:** a `tool.yaml` manifest and a `mcpptool.py` with `execute()`. No special packaging, no setup.py, no pip install.
 
 ## Multi-Module Tools
 
-A single module can expose many tools. The `plan` module demonstrates this with 19 tools across four groups:
+A single module can expose many tools. The [`mcpp-plan`](https://github.com/pacmac/mcpp-plan) module demonstrates this with 19 tools across four groups:
 
 ```yaml
 name: plan
@@ -379,7 +391,7 @@ help(tool="fetch_page")
 
 ## Multi-User, Multi-Project Support
 
-The `plan` tool demonstrates mcpp's support for complex, stateful tools:
+The [`mcpp-plan`](https://github.com/pacmac/mcpp-plan) tool demonstrates mcpp's support for complex, stateful tools:
 
 - **Single shared database** (`~/.config/plan/plan.db`) -- all projects, all users, one SQLite file
 - **Automatic project detection** -- the workspace directory maps to a project; each project gets isolated task lists
