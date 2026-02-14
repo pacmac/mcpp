@@ -1,0 +1,10 @@
+name: template_pkg          # change me
+scope: global               # "local" (workspace-relative) or "global"
+about: "Short description of what this module does and when to use it."  # change me
+
+tools:
+  - name: template_pkg_value   # change me
+    description: "Return a value from a sibling module (example)."
+    inputSchema:
+      type: object
+      properties: {}

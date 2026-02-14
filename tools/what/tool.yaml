@@ -1,0 +1,18 @@
+name: what
+scope: local
+about: "Scaffolds a WHAT/HOW/ACTIONS/TASKS project structure. Use when starting a new structured project."
+
+tools:
+  - name: what_add
+    description: "Create a named plan under ./what/<name>/ with WHAT.md, HOW.md, ACTIONS.md, TASKS.md templates."
+    inputSchema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: "Plan name (becomes subfolder under what/)."
+        overwrite:
+          type: boolean
+          description: "Overwrite existing files if present (default: false)."
+      required:
+        - name

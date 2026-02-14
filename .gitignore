@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+.state
+*.db
+cache.yaml
+.claude/
+.md/
+PLAN_PENDING.md

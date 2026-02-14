@@ -7,25 +7,6 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-MODULE_NAME = "fetch_page"
-MODULE_SCOPE = "global"
-MODULE_ABOUT = "Fetches URL content with on-disk caching. Use when you need to retrieve and read web page content."
-
-TOOLS = [
-    {
-        "name": "fetch_page",
-        "description": "Fetch a URL (with on-disk cache under this module dir) and return the first N characters of the response body.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "url": {"type": "string"},
-                "max_chars": {"type": "integer", "minimum": 1, "maximum": 200000},
-            },
-            "required": ["url"],
-        },
-    }
-]
-
 
 def get_info(context: dict[str, Any] | None = None) -> dict[str, Any]:
     module_dir = (context or {}).get("module_dir") or str(Path(__file__).resolve().parent)

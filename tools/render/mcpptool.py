@@ -4,25 +4,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-MODULE_NAME = "render"
-MODULE_SCOPE = "local"
-MODULE_ABOUT = "Renders web pages via Playwright and returns metadata, text, and structure. Use when you need to inspect how a page looks or behaves."
-
-TOOLS = [
-    {
-        "name": "render",
-        "description": "Render a page using rendermod (Playwright-based). Requires render.yaml in the workspace.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "page": {"type": "string", "description": "Page name or path to render"},
-                "device": {"type": "string", "description": "Device type: mobile, tablet, or desktop"},
-                "args": {"type": "object", "description": "Query-string overrides as key-value pairs"},
-            },
-            "required": ["page"],
-        },
-    }
-]
 
 def _ensure_rendermod_importable() -> None:
     """Add rendermod to sys.path, looking relative to this module location."""

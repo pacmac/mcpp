@@ -2,11 +2,8 @@
 """
 Minimal stdio MCP (JSON-RPC 2.0) server wrapper.
 
-Implements the contract documented in SPEC.md:
-- initialize
-- tools/list
-- tools/call
-- ignores notifications/*
+Tool modules declare their contract via tool.yaml manifests.
+Python code is only loaded lazily on first tool call.
 """
 
 from __future__ import annotations
@@ -19,16 +16,21 @@ import signal
 import sys
 import time
 import traceback
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable
 
 import importlib.util
 
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: ignore[assignment]
+
 
 PROTOCOL_VERSION = "2025-06-18"
-SERVER_INFO = {"name": "mcpp", "version": "0.1.0"}
+SERVER_INFO = {"name": "mcpp", "version": "0.2.0"}
 
 _shutdown_requested = False
 
@@ -38,21 +40,74 @@ class _ToolTimeout(Exception):
 
 
 @dataclass(frozen=True)
-class ModuleSource:
-    import_name: str
-    entry_path: Path  # either tools/<name>.py or tools/<name>/main.py
-    module_dir: Path  # tools/ or tools/<name>/
+class ManifestEntry:
+    """Parsed tool.yaml manifest for a single module directory."""
+    name: str
+    scope: str
+    about: str
+    tools: list[dict[str, Any]]
+    module_dir: Path
 
 
-@dataclass(frozen=True)
+@dataclass
 class ToolEntry:
+    """Runtime entry for a registered tool, with lazy-loaded module."""
     tool_name: str
     tool_schema: dict[str, Any]
-    module: ModuleType
     module_name: str
     module_scope: str
     module_dir: str
-    execute: Callable[..., dict[str, Any]]
+    _module: ModuleType | None = field(default=None, repr=False)
+    _execute: Callable[..., dict[str, Any]] | None = field(default=None, repr=False)
+
+    def load_module(self) -> None:
+        """Import the module's mcpptool.py and resolve execute()."""
+        if self._module is not None:
+            return
+        mod_dir = Path(self.module_dir)
+        main_py = mod_dir / "mcpptool.py"
+        if not main_py.exists():
+            raise ImportError(f"mcpptool.py not found in {mod_dir}")
+
+        import_name = f"mcpp_tools.{mod_dir.name}"
+        spec = importlib.util.spec_from_file_location(
+            import_name, str(main_py),
+            submodule_search_locations=[str(mod_dir)],
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError(f"cannot load module spec: {main_py}")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[import_name] = mod
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+
+        execute = getattr(mod, "execute", None)
+        if not callable(execute):
+            raise ImportError(f"module {self.module_name} has no execute() function")
+
+        # Optional initializer.
+        init_fn = getattr(mod, "initialize", None)
+        if callable(init_fn):
+            try:
+                init_res = init_fn()
+                if isinstance(init_res, dict) and init_res.get("success") is False:
+                    logging.warning("module initialize() reported failure: %s (%s)", self.module_name, init_res.get("message"))
+            except Exception:
+                logging.warning("module initialize() raised: %s (%s)", self.module_name, traceback.format_exc().rstrip())
+
+        self._module = mod
+        self._execute = execute
+
+    @property
+    def module(self) -> ModuleType:
+        if self._module is None:
+            self.load_module()
+        return self._module  # type: ignore[return-value]
+
+    @property
+    def execute(self) -> Callable[..., dict[str, Any]]:
+        if self._execute is None:
+            self.load_module()
+        return self._execute  # type: ignore[return-value]
 
 
 def _setup_logging() -> None:
@@ -71,69 +126,117 @@ def _setup_logging() -> None:
 
 
 def _load_config() -> tuple[Path, int]:
-    base_dir = Path(__file__).resolve().parent
-    modules_path_s = os.getenv("MCPP_MODULES_PATH", "tools").strip()
-    tools_dir = Path(modules_path_s)
-    if not tools_dir.is_absolute():
-        tools_dir = (base_dir / tools_dir).resolve()
+    # Base directory for resolving tools.yaml and relative module paths.
+    # Defaults to the directory containing mcpp.py.
+    base_dir_s = os.getenv("MCPP_BASE_DIR", "").strip()
+    if base_dir_s:
+        base_dir = Path(base_dir_s).resolve()
+    else:
+        base_dir = Path(__file__).resolve().parent
 
     try:
         timeout_s = int(os.getenv("MCPP_TIMEOUT_SECONDS", "30").strip())
     except Exception:
         timeout_s = 30
-    return tools_dir, timeout_s
+    return base_dir, timeout_s
 
 
-def _iter_module_sources(tools_dir: Path) -> list[ModuleSource]:
-    if not tools_dir.exists() or not tools_dir.is_dir():
-        raise RuntimeError(f"tools dir not found: {tools_dir}")
+# ── Manifest parsing ──
 
-    out: list[ModuleSource] = []
-    for p in sorted(tools_dir.iterdir()):
-        if p.name.startswith("_"):
-            continue
-        if not p.is_dir():
-            # Enforce convention: modules are directories only (tools/<name>/main.py).
-            continue
-
-        # Package-style module: tools/<name>/main.py plus sibling files.
-        main_py = p / "main.py"
-        if not main_py.exists() or not main_py.is_file():
-            continue
-        out.append(ModuleSource(import_name=f"mcpp_tools.{p.name}", entry_path=main_py, module_dir=p))
-    return out
+def _parse_yaml(text: str) -> Any:
+    """Parse YAML text using PyYAML if available, else a minimal parser."""
+    if yaml is not None:
+        return yaml.safe_load(text)
+    raise RuntimeError("PyYAML is required: pip install pyyaml")
 
 
-def _import_module_from_source(src: ModuleSource) -> ModuleType:
-    # For directory modules, load tools/<name>/main.py as a package module to enable relative imports.
-    is_pkg = src.entry_path.name == "main.py"
-    search_locations = [str(src.module_dir)] if is_pkg else None
-    spec = importlib.util.spec_from_file_location(src.import_name, str(src.entry_path), submodule_search_locations=search_locations)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load module spec: {src.entry_path}")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    return mod
+def _load_manifest(yaml_path: Path) -> ManifestEntry:
+    """Parse and validate a tool.yaml manifest."""
+    text = yaml_path.read_text(encoding="utf-8")
+    data = _parse_yaml(text)
+
+    if not isinstance(data, dict):
+        raise ValueError(f"tool.yaml must be a YAML mapping, got {type(data).__name__}")
+
+    # Required fields.
+    name = data.get("name")
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError("tool.yaml: 'name' is required and must be a non-empty string")
+
+    tools = data.get("tools")
+    if not isinstance(tools, list) or not tools:
+        raise ValueError("tool.yaml: 'tools' is required and must be a non-empty list")
+
+    # Validate each tool entry.
+    for i, t in enumerate(tools):
+        if not isinstance(t, dict):
+            raise ValueError(f"tool.yaml: tools[{i}] must be a mapping")
+        tname = t.get("name")
+        if not isinstance(tname, str) or not tname.strip():
+            raise ValueError(f"tool.yaml: tools[{i}].name is required")
+        if "description" not in t:
+            raise ValueError(f"tool.yaml: tools[{i}].description is required")
+        if "inputSchema" not in t:
+            raise ValueError(f"tool.yaml: tools[{i}].inputSchema is required")
+
+    # Optional fields.
+    scope = data.get("scope", "local")
+    if not isinstance(scope, str) or scope.strip().lower() not in {"local", "global"}:
+        raise ValueError(f"tool.yaml: 'scope' must be 'local' or 'global', got {scope!r}")
+    scope = scope.strip().lower()
+
+    about = data.get("about", "")
+    if not isinstance(about, str):
+        about = ""
+
+    module_dir = yaml_path.parent
+    return ManifestEntry(name=name.strip(), scope=scope, about=about.strip(), tools=tools, module_dir=module_dir)
 
 
-def _ensure_tools_namespace(tools_dir: Path) -> None:
-    # Directory modules are loaded as packages under "mcpp_tools.<name>" and may use relative imports.
-    # Ensure the parent package "mcpp_tools" exists as a namespace package.
+# ── Registry ──
+
+def _load_registry(base_dir: Path) -> list[Path]:
+    """Read tools.yaml and return resolved module directory paths."""
+    registry_path = base_dir / "tools.yaml"
+    if not registry_path.exists():
+        raise RuntimeError(f"tools.yaml not found at {registry_path}")
+
+    text = registry_path.read_text(encoding="utf-8")
+    data = _parse_yaml(text)
+
+    if not isinstance(data, dict):
+        raise ValueError(f"tools.yaml must be a YAML mapping, got {type(data).__name__}")
+
+    modules = data.get("modules")
+    if not isinstance(modules, list) or not modules:
+        raise ValueError("tools.yaml: 'modules' is required and must be a non-empty list")
+
+    paths: list[Path] = []
+    for i, entry in enumerate(modules):
+        if not isinstance(entry, dict):
+            raise ValueError(f"tools.yaml: modules[{i}] must be a mapping with 'path'")
+        path_s = entry.get("path")
+        if not isinstance(path_s, str) or not path_s.strip():
+            raise ValueError(f"tools.yaml: modules[{i}].path is required")
+
+        p = Path(path_s.strip())
+        if not p.is_absolute():
+            p = (base_dir / p).resolve()
+        paths.append(p)
+
+    return paths
+
+
+# ── Discovery ──
+
+def _ensure_tools_namespace() -> None:
     pkg_name = "mcpp_tools"
     if pkg_name in sys.modules:
         return
     pkg = ModuleType(pkg_name)
-    pkg.__path__ = [str(tools_dir.resolve())]  # type: ignore[attr-defined]
+    pkg.__path__ = []  # type: ignore[attr-defined]
     pkg.__package__ = pkg_name  # type: ignore[attr-defined]
     sys.modules[pkg_name] = pkg
-
-
-def _normalize_scope(mod: ModuleType) -> str:
-    scope = getattr(mod, "MODULE_SCOPE", "local")
-    if not isinstance(scope, str):
-        return "local"
-    scope = scope.strip().lower()
-    return scope if scope in {"local", "global"} else "local"
 
 
 _HELP_TOOL_SCHEMA: dict[str, Any] = {
@@ -158,26 +261,33 @@ _HELP_TOOL_SCHEMA: dict[str, Any] = {
 def _handle_help(
     arguments: dict[str, Any],
     tools_by_name: dict[str, ToolEntry],
+    manifests: dict[str, ManifestEntry],
     workspace_dir: str,
 ) -> dict[str, Any]:
     tool_name = arguments.get("tool")
 
     if not tool_name:
-        # List all modules' MODULE_ABOUT.
+        # List all tools from manifests (no module import needed).
         abouts: dict[str, str] = {}
-        for entry in tools_by_name.values():
-            about = getattr(entry.module, "MODULE_ABOUT", None)
-            if isinstance(about, str) and about.strip():
-                abouts[entry.tool_name] = about
-            else:
-                abouts[entry.tool_name] = entry.tool_schema.get("description", "")
+        for mname, manifest in manifests.items():
+            for t in manifest.tools:
+                tname = t["name"]
+                if manifest.about:
+                    abouts[tname] = manifest.about
+                else:
+                    abouts[tname] = t.get("description", "")
         return {"success": True, "result": {"tools": abouts}}
 
     entry = tools_by_name.get(tool_name)
     if entry is None:
         return {"success": False, "error": f"Unknown tool: {tool_name}"}
 
-    get_info_fn = getattr(entry.module, "get_info", None)
+    # get_info requires module import (lazy load).
+    try:
+        get_info_fn = getattr(entry.module, "get_info", None)
+    except ImportError as e:
+        return {"success": False, "error": f"Failed to load module: {e}"}
+
     if not callable(get_info_fn):
         return {"success": True, "result": {"params": {}}}
 
@@ -196,72 +306,57 @@ def _handle_help(
     return {"success": True, "result": info}
 
 
-def discover_tools(tools_dir: Path) -> tuple[list[dict[str, Any]], dict[str, ToolEntry]]:
+def discover_tools(base_dir: Path) -> tuple[list[dict[str, Any]], dict[str, ToolEntry], dict[str, ManifestEntry]]:
+    """Discover tools from tools.yaml registry + tool.yaml manifests. No Python imports happen here."""
     tools_list: list[dict[str, Any]] = []
     tools_by_name: dict[str, ToolEntry] = {}
+    manifests: dict[str, ManifestEntry] = {}
+
+    _ensure_tools_namespace()
+
+    module_paths = _load_registry(base_dir)
 
     loaded_modules = 0
     loaded_tools = 0
 
-    _ensure_tools_namespace(tools_dir)
+    for p in module_paths:
+        if not p.is_dir():
+            logging.warning("skipping %s: directory not found", p)
+            continue
 
-    for src in _iter_module_sources(tools_dir):
+        yaml_path = p / "tool.yaml"
+        if not yaml_path.exists():
+            logging.warning("skipping %s: no tool.yaml", p)
+            continue
+
         try:
-            mod = _import_module_from_source(src)
-        except Exception:
-            logging.warning("failed to import %s: %s", src.entry_path, traceback.format_exc().rstrip())
+            manifest = _load_manifest(yaml_path)
+        except Exception as e:
+            logging.warning("skipping %s: invalid tool.yaml: %s", p, e)
             continue
 
-        module_name = getattr(mod, "MODULE_NAME", None)
-        tool_defs = getattr(mod, "TOOLS", None)
-        execute = getattr(mod, "execute", None)
-
-        if not isinstance(module_name, str) or not module_name.strip():
-            logging.error("skipping %s: missing/invalid MODULE_NAME", src.entry_path.name)
-            continue
-        if not isinstance(tool_defs, list):
-            logging.error("skipping %s: missing/invalid TOOLS", src.entry_path.name)
-            continue
-        if not callable(execute):
-            logging.error("skipping %s: missing/invalid execute()", src.entry_path.name)
+        main_py = p / "mcpptool.py"
+        if not main_py.exists():
+            logging.warning("skipping %s: tool.yaml found but no mcpptool.py", p)
             continue
 
-        module_scope = _normalize_scope(mod)
-        # For package-style modules, module_dir should be tools/<name>/, not the tools/ directory.
-        module_dir = str(src.module_dir.resolve())
+        manifests[manifest.name] = manifest
+        module_dir = str(manifest.module_dir.resolve())
 
-        # Optional module initializer.
-        init_fn = getattr(mod, "initialize", None)
-        if callable(init_fn):
-            try:
-                init_res = init_fn()
-                if isinstance(init_res, dict) and init_res.get("success") is False:
-                    logging.warning("module initialize() reported failure: %s (%s)", module_name, init_res.get("message"))
-            except Exception:
-                logging.warning("module initialize() raised: %s (%s)", module_name, traceback.format_exc().rstrip())
-
-        for t in tool_defs:
-            if not isinstance(t, dict):
-                logging.error("skipping tool in %s: tool entry is not a dict", module_name)
-                continue
-            tool_name = t.get("name")
-            if not isinstance(tool_name, str) or not tool_name.strip():
-                logging.error("skipping tool in %s: missing/invalid tool name", module_name)
-                continue
-            if tool_name == "help":
-                raise RuntimeError(f"reserved tool name 'help' used by module: {module_name}")
-            if tool_name in tools_by_name:
-                raise RuntimeError(f"duplicate tool name: {tool_name}")
+        for t in manifest.tools:
+            tname = t["name"]
+            if tname == "help":
+                raise RuntimeError(f"reserved tool name 'help' used by module: {manifest.name}")
+            if tname in tools_by_name:
+                raise RuntimeError(f"duplicate tool name: {tname}")
 
             tools_list.append(t)
-            tools_by_name[tool_name] = ToolEntry(
-                tool_name=tool_name,
+            tools_by_name[tname] = ToolEntry(
+                tool_name=tname,
                 tool_schema=t,
-                module=mod,
-                module_name=module_name,
-                module_scope=module_scope,
+                module_name=manifest.name,
+                module_scope=manifest.scope,
                 module_dir=module_dir,
-                execute=execute,
             )
             loaded_tools += 1
 
@@ -270,8 +365,8 @@ def discover_tools(tools_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Too
     # Register built-in help tool last.
     tools_list.append(_HELP_TOOL_SCHEMA)
 
-    logging.info("loaded %d modules with %d tools (+help) from %s", loaded_modules, loaded_tools, tools_dir)
-    return tools_list, tools_by_name
+    logging.info("discovered %d modules with %d tools (+help) from registry", loaded_modules, loaded_tools)
+    return tools_list, tools_by_name, manifests
 
 
 def _jsonrpc_response(id_: Any, result: Any = None, error: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -324,21 +419,20 @@ def _call_execute(entry: ToolEntry, arguments: dict[str, Any], workspace_dir: st
     }
 
     def invoke() -> dict[str, Any]:
-        # Back-compat: allow execute(tool_name, arguments) modules.
+        execute_fn = entry.execute  # triggers lazy load
         try:
-            sig = inspect.signature(entry.execute)
+            sig = inspect.signature(execute_fn)
             params = list(sig.parameters.values())
             has_varargs = any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params)
             if has_varargs or len(params) >= 3:
-                return entry.execute(entry.tool_name, arguments, ctx)
-            return entry.execute(entry.tool_name, arguments)
+                return execute_fn(entry.tool_name, arguments, ctx)
+            return execute_fn(entry.tool_name, arguments)
         except TypeError:
-            return entry.execute(entry.tool_name, arguments)
+            return execute_fn(entry.tool_name, arguments)
 
     if timeout_seconds <= 0:
         return invoke()
 
-    # Best-effort timeout. SIGALRM is Unix-only and only works on main thread.
     if hasattr(signal, "SIGALRM"):
         old = signal.getsignal(signal.SIGALRM)
 
@@ -362,11 +456,11 @@ def handle_message(
     tools_by_name: dict[str, ToolEntry],
     workspace_dir: str,
     timeout_seconds: int,
+    manifests: dict[str, ManifestEntry] | None = None,
 ) -> dict[str, Any] | None:
     method = msg.get("method")
     id_ = msg.get("id", None)
 
-    # Notifications: ignore (no response).
     if id_ is None:
         return None
 
@@ -386,8 +480,6 @@ def handle_message(
                 },
             )
 
-        # Some MCP clients expect a JSON-RPC-ish shutdown lifecycle.
-        # We don't maintain state beyond "shutdown requested" and exit on "exit" notification.
         if method == "shutdown":
             global _shutdown_requested
             _shutdown_requested = True
@@ -405,9 +497,8 @@ def handle_message(
             if not isinstance(name, str) or not isinstance(arguments, dict):
                 return _jsonrpc_response(id_, error=_jsonrpc_error(-32602, "Invalid params"))
 
-            # Built-in help tool.
             if name == "help":
-                help_res = _handle_help(arguments, tools_by_name, workspace_dir)
+                help_res = _handle_help(arguments, tools_by_name, manifests or {}, workspace_dir)
                 if help_res.get("success") is True:
                     return _jsonrpc_response(id_, result={"content": [_content_text(help_res.get("result"))]})
                 err_text = help_res.get("error") or "Unknown error"
@@ -475,22 +566,20 @@ def _read_json_messages(stream: Any) -> Any:
 
 def main() -> int:
     _setup_logging()
-    tools_dir, timeout_seconds = _load_config()
+    base_dir, timeout_seconds = _load_config()
     workspace_dir = str(Path.cwd().resolve())
 
     try:
-        tools_list, tools_by_name = discover_tools(tools_dir)
+        tools_list, tools_by_name, manifests = discover_tools(base_dir)
     except Exception as e:
         logging.error("startup failed: %s", e)
         return 1
 
     for msg in _read_json_messages(sys.stdin):
-        # JSON-RPC exit notification: used by some clients after shutdown.
-        # We only honor it after a shutdown request to avoid surprising exits.
         method = msg.get("method")
         if isinstance(method, str) and method == "exit" and _shutdown_requested:
             break
-        resp = handle_message(msg, tools_list, tools_by_name, workspace_dir, timeout_seconds)
+        resp = handle_message(msg, tools_list, tools_by_name, workspace_dir, timeout_seconds, manifests)
         if resp is None:
             continue
         sys.stdout.write(json.dumps(resp, ensure_ascii=True, separators=(",", ":")) + "\n")

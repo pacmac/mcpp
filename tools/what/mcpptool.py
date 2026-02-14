@@ -4,25 +4,6 @@ from pathlib import Path
 from typing import Any
 
 
-MODULE_NAME = "what"
-MODULE_SCOPE = "local"
-MODULE_ABOUT = "Scaffolds a WHAT/HOW/ACTIONS/TASKS project structure. Use when starting a new structured project."
-
-TOOLS = [
-    {
-        "name": "what_add",
-        "description": "Create a named plan under ./what/<name>/ with WHAT.md, HOW.md, ACTIONS.md, TASKS.md templates.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string", "description": "Plan name (becomes subfolder under what/)."},
-                "overwrite": {"type": "boolean", "description": "Overwrite existing files if present (default: false)."},
-            },
-            "required": ["name"],
-        },
-    }
-]
-
 
 def get_info(context: dict[str, Any] | None = None) -> dict[str, Any]:
     # List existing plans if workspace_dir available.

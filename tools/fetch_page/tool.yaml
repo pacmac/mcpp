@@ -1,0 +1,18 @@
+name: fetch_page
+scope: global
+about: "Fetches URL content with on-disk caching. Use when you need to retrieve and read web page content."
+
+tools:
+  - name: fetch_page
+    description: "Fetch a URL (with on-disk cache under this module dir) and return the first N characters of the response body."
+    inputSchema:
+      type: object
+      properties:
+        url:
+          type: string
+        max_chars:
+          type: integer
+          minimum: 1
+          maximum: 200000
+      required:
+        - url
