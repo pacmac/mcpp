@@ -74,7 +74,7 @@ When starting work on a new project, have the agent explore it first:
 
 ```
 > Discover what this project is about, including its structure,
-> and add what you learn to your project notes.
+> and add what you learn to the project notes.
 ```
 
 This lets the agent build its own understanding of the codebase -- what's where, how things connect, what conventions are used -- and persist that context for future sessions.
