@@ -6,4 +6,6 @@ __pycache__/
 cache.yaml
 .claude/
 .md/
+.off/
 PLAN_PENDING.md
+what/test-project/
