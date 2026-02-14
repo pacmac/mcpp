@@ -68,7 +68,18 @@ env = { MCPP_LOG_LEVEL = "error", MCPP_TIMEOUT_SECONDS = "30" }
 python3 /path/to/mcpp/mcpp.py
 ```
 
-### 3. Use It
+### 3. Orient the Agent
+
+Before diving into tasks, show the agent your project and let it build context:
+
+```
+> Read this project's README, explore the structure, and add what you
+> learn to your project notes.
+```
+
+This gives the agent a working understanding of how tools are organized, what's available, and how to extend things -- before it needs to act on any of that.
+
+### 4. Use It
 
 Once configured, your agent sees all registered tools. In Claude Code they appear as `mcp__mcpp__<tool_name>`:
 
@@ -77,7 +88,7 @@ Once configured, your agent sees all registered tools. In Claude Code they appea
 
 I have these tools available:
 - fetch_page -- fetch and cache web content
-- render -- render pages via Playwright
+- what_add -- scaffold a new plan directory
 - plan_task_new -- create a new task with steps
 - plan_task_list -- list all tasks
   ... (19 plan tools total)
@@ -103,7 +114,7 @@ I have these tools available:
 │                                   │                 │
 │            ┌──────────┬───────────┼──────────┐      │
 │            ▼          ▼           ▼          ▼      │
-│       fetch_page   render      plan      your_tool  │
+│       fetch_page    what       plan      your_tool  │
 │       tool.yaml    tool.yaml   tool.yaml  tool.yaml │
 │       mcpptool.py  mcpptool.py mcpptool.py  ...    │
 └─────────────────────────────────────────────────────┘
@@ -231,7 +242,6 @@ The top-level `tools.yaml` lists which modules to load:
 ```yaml
 modules:
   - path: tools/fetch_page          # built-in, relative to tools.yaml
-  - path: tools/render              # built-in
   - path: tools/what                # built-in
   - path: ../mcpp-plan              # external: github.com/pacmac/mcpp-plan
   - path: /opt/custom/my_tool       # absolute paths work too
@@ -473,9 +483,6 @@ mcpp/
 │   │   ├── mcpptool.py
 │   │   └── helper.py
 │   ├── fetch_page/      # URL fetcher with disk cache
-│   │   ├── tool.yaml
-│   │   └── mcpptool.py
-│   ├── render/          # Playwright page renderer
 │   │   ├── tool.yaml
 │   │   └── mcpptool.py
 │   └── what/            # Project scaffolding
