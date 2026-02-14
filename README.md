@@ -68,18 +68,7 @@ env = { MCPP_LOG_LEVEL = "error", MCPP_TIMEOUT_SECONDS = "30" }
 python3 /path/to/mcpp/mcpp.py
 ```
 
-### 3. Orient the Agent
-
-When starting work on a new project, have the agent explore it first:
-
-```
-> Discover what this project is about, including its structure,
-> and add what you learn to the project notes.
-```
-
-This lets the agent build its own understanding of the codebase -- what's where, how things connect, what conventions are used -- and persist that context for future sessions.
-
-### 4. Use It
+### 3. Use It
 
 Once configured, your agent sees all registered tools. In Claude Code they appear as `mcp__mcpp__<tool_name>`:
 
@@ -93,6 +82,26 @@ I have these tools available:
 - plan_task_list -- list all tasks
   ... (19 plan tools total)
 ```
+
+## Hints & Tips
+
+**Orient the agent on a new project.** When starting work on a fresh codebase, have the agent explore it first:
+
+```
+> Discover what this project is about, including its structure,
+> and add what you learn to the project notes.
+```
+
+This lets the agent build its own understanding of the codebase -- what's where, how things connect, what conventions are used -- and persist that context for future sessions.
+
+**Capture ideas without losing focus.** If you spot an unrelated issue or think of something while working on a task, tell the agent to note it and carry on:
+
+```
+> Add a task: "refactor the cache expiry logic" -- then continue
+> what you were doing.
+```
+
+This keeps your current flow intact while making sure the thought doesn't get lost.
 
 ## Architecture
 
