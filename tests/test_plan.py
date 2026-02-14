@@ -475,12 +475,13 @@ class TestPlanTools(unittest.TestCase):
         self.assertIsNotNone(row["active_context_id"])
 
     def test_82_task_list_default_filters_by_user(self):
-        """Default task list only shows current user's tasks."""
+        """Default task list only shows current user's tasks with user field."""
         r = self._call("plan_task_list")
         tasks = r["tasks"]
-        # All tasks should belong to current user (no 'user' key in non-all mode)
+        user = os.environ.get("USER", "root")
         for t in tasks:
-            self.assertNotIn("user", t)
+            self.assertIn("user", t)
+            self.assertEqual(t["user"], user)
 
     def test_83_task_list_show_all_includes_user(self):
         """task_list with show_all=true includes user field."""

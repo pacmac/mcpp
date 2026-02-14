@@ -437,5 +437,83 @@ class TestWrapperTestingPhase(unittest.TestCase):
             _drain_and_close(p)
 
 
+    def test_display_key_produces_audience_annotations(self) -> None:
+        """When a tool returns a display key, the wrapper emits two content items with audience annotations."""
+        with tempfile.TemporaryDirectory() as td:
+            ws = Path(td) / "ws"
+            ws.mkdir()
+            tools_dir = Path(td) / "tools"
+            tools_dir.mkdir()
+            (tools_dir / "__init__.py").write_text("", encoding="utf-8")
+
+            dmod = tools_dir / "disp"
+            dmod.mkdir()
+            (dmod / "main.py").write_text(
+                "\n".join(
+                    [
+                        'MODULE_NAME="disp"',
+                        'MODULE_SCOPE="local"',
+                        "TOOLS=[{"
+                        '"name":"disp_with",'
+                        '"description":"returns display",'
+                        '"inputSchema":{"type":"object","properties":{}}'
+                        "},{"
+                        '"name":"disp_without",'
+                        '"description":"no display",'
+                        '"inputSchema":{"type":"object","properties":{}}'
+                        "}]",
+                        "def execute(tool_name, arguments, context=None):",
+                        "    if tool_name == 'disp_with':",
+                        "        return {'success': True, 'result': {'count': 2}, 'display': '**Items**: 2'}",
+                        "    return {'success': True, 'result': {'count': 0}}",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            p = self._start(cwd=ws, tools_dir=tools_dir)
+            assert p.stdin is not None and p.stdout is not None
+
+            _write_req(
+                p.stdin,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test", "version": "0"}},
+                },
+            )
+            _read_json_line(p.stdout)
+
+            # Tool WITH display key: expect two content items.
+            _write_req(p.stdin, {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "disp_with", "arguments": {}}})
+            r = _read_json_line(p.stdout)
+            content = r["result"]["content"]
+            self.assertEqual(len(content), 2)
+            # First: user-facing display text
+            self.assertEqual(content[0]["type"], "text")
+            self.assertEqual(content[0]["text"], "**Items**: 2")
+            self.assertEqual(content[0]["annotations"]["audience"], ["user"])
+            # Second: assistant-facing JSON
+            self.assertEqual(content[1]["type"], "text")
+            data = json.loads(content[1]["text"])
+            self.assertEqual(data["count"], 2)
+            self.assertEqual(content[1]["annotations"]["audience"], ["assistant"])
+
+            # Tool WITHOUT display key: expect single content item, no annotations.
+            _write_req(p.stdin, {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "disp_without", "arguments": {}}})
+            r = _read_json_line(p.stdout)
+            content = r["result"]["content"]
+            self.assertEqual(len(content), 1)
+            self.assertNotIn("annotations", content[0])
+            data = json.loads(content[0]["text"])
+            self.assertEqual(data["count"], 0)
+
+            p.stdin.close()
+            p.wait(timeout=5)
+            _drain_and_close(p)
+
+
 if __name__ == "__main__":
     unittest.main()

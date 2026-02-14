@@ -16,6 +16,9 @@ MODULE_NAME = "plan"
 MODULE_SCOPE = "local"
 MODULE_ABOUT = "Manage project tasks and steps with persistent state. Use to track work across sessions."
 
+DB_NAME = ".state"
+LEGACY_DB_NAMES = ["plan.db", "agent.db"]
+
 _project_nudge_sent = False
 
 
@@ -404,14 +407,15 @@ TOOLS: list[dict[str, Any]] = [
 
 
 def _find_db_path(workspace_dir: Path) -> Path:
-    """Return the database path, preferring plan.db but falling back to agent.db."""
-    plan_db = workspace_dir / "plan.db"
-    if plan_db.exists():
-        return plan_db
-    legacy_db = workspace_dir / "agent.db"
-    if legacy_db.exists():
-        return legacy_db
-    return plan_db  # default for new databases
+    """Return the database path, preferring DB_NAME but falling back to LEGACY_DB_NAMES."""
+    primary = workspace_dir / DB_NAME
+    if primary.exists():
+        return primary
+    for legacy_name in LEGACY_DB_NAMES:
+        legacy = workspace_dir / legacy_name
+        if legacy.exists():
+            return legacy
+    return primary  # default for new databases
 
 
 def get_info(context: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -437,7 +441,7 @@ def get_info(context: dict[str, Any] | None = None) -> dict[str, Any]:
             "number": {"values": None, "default": None}
         },
         "existing_tasks": existing_tasks,
-        "database_file": "plan.db (workspace-local, falls back to agent.db)",
+        "database_file": f"{DB_NAME} (workspace-local, legacy fallbacks: {', '.join(LEGACY_DB_NAMES)})",
         "tip": "Ask 'what am I working on?' to see current state"
     }
 

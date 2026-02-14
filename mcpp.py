@@ -27,7 +27,7 @@ from typing import Any, Callable
 import importlib.util
 
 
-PROTOCOL_VERSION = "2024-11-05"
+PROTOCOL_VERSION = "2025-06-18"
 SERVER_INFO = {"name": "mcpp", "version": "0.1.0"}
 
 _shutdown_requested = False
@@ -287,12 +287,33 @@ def _jsonrpc_error(code: int, message: str) -> dict[str, Any]:
     return {"code": code, "message": message}
 
 
-def _content_text(payload: Any) -> dict[str, Any]:
+def _content_text(payload: Any, audience: list[str] | None = None) -> dict[str, Any]:
     if isinstance(payload, str):
         text = payload
     else:
         text = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
-    return {"type": "text", "text": text}
+    item: dict[str, Any] = {"type": "text", "text": text}
+    if audience:
+        item["annotations"] = {"audience": audience}
+    return item
+
+
+def _build_content(tool_res: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build MCP content list from a tool result.
+
+    If tool_res has a "display" key, return two content items:
+    - human-readable text for the user (audience: ["user"])
+    - structured JSON for the assistant (audience: ["assistant"])
+    Otherwise return a single content item with no audience filter.
+    """
+    display = tool_res.get("display")
+    result = tool_res.get("result")
+    if display:
+        return [
+            _content_text(display, audience=["user"]),
+            _content_text(result, audience=["assistant"]),
+        ]
+    return [_content_text(result)]
 
 
 def _call_execute(entry: ToolEntry, arguments: dict[str, Any], workspace_dir: str, timeout_seconds: int) -> dict[str, Any]:
@@ -416,7 +437,7 @@ def handle_message(
                 tool_res = {"success": False, "error": "tool returned non-dict result"}
 
             if tool_res.get("success") is True:
-                return _jsonrpc_response(id_, result={"content": [_content_text(tool_res.get("result"))]})
+                return _jsonrpc_response(id_, result={"content": _build_content(tool_res)})
 
             err_text = tool_res.get("error") or "Unknown error"
             return _jsonrpc_response(
