@@ -1,5 +1,4 @@
 modules:
   - path: tools/fetch_page
-  - path: tools/render
   - path: tools/what
   - path: ../mcpp-plan
