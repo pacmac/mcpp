@@ -493,6 +493,10 @@ mcpp implements the [Model Context Protocol](https://modelcontextprotocol.io/) o
 | `notifications/*` | Yes | Silently acknowledged |
 | Content annotations | Yes | `audience: ["user"]` / `["assistant"]` via display key |
 
+## Inspired By
+
+This project was inspired by [Andreas Wenk](https://www.youtube.com/watch?v=5DG0-_lseR4) and his work on MCP server architecture.
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)
