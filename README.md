@@ -103,6 +103,30 @@ This lets the agent build its own understanding of the codebase -- what's where,
 
 This keeps your current flow intact while making sure the thought doesn't get lost.
 
+**Checkpoint before big changes.** Before a refactor or risky edit, ask for a commit so you have a rollback point:
+
+```
+> Commit what we have before refactoring.
+```
+
+**Review before you push.** After multi-file edits, ask the agent to summarise what changed:
+
+```
+> Show me what you changed and why.
+```
+
+**Let the agent plan first.** For complex tasks, have it think before writing code:
+
+```
+> Plan how you'd approach this before writing code.
+```
+
+**Use help for discovery.** Agents can call the built-in `help` tool to see what's available — no need to remember tool names:
+
+```
+> What mcpp tools do you have?
+```
+
 ## Architecture
 
 ```
