@@ -1,3 +1,5 @@
 modules:
   - path: tools/fetch_page
   - path: ../mcpp-plan
+  - path: ../mcpp-git
+  - path: ../mcpp-chat
